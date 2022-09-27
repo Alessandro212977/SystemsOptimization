@@ -5,6 +5,9 @@ class Event:
         self.period = period
         self.deadline = deadline
 
+    def __repr__(self):
+        pass
+
 class TT(Event):
     def __init__(self, name, duration, period, deadline) -> None:
         super().__init__(name, duration, period, deadline)
