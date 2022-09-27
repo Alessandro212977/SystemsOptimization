@@ -26,12 +26,10 @@ class EDF:
         pass
 
 
-
-
-
 if __name__ == "__main__":
     tasks = dl("./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv")
-    print(tasks.loadFile())
+    tt = tasks.loadFile()
+    
     
 
 
