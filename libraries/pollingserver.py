@@ -4,3 +4,6 @@ class PollingServer:
         self.period = period
         self.deadline = deadline
         self.tasks = tasks
+
+    def getTask(self):
+        pass
