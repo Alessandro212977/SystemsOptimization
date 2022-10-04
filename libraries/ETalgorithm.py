@@ -1,24 +1,29 @@
 
-from math import lcm
+from math import lcm, ceil
 import dataloader
+from pollingserver import PollingServer
 
 class EDP:
     def __init__(self, path) -> None:
         dl = dataloader.DataLoader(path)
         self.TT, self.ET  = dl.loadFile()
+        self.PS = self.initialize() #list of polling servers
+
+    def initialize(self):
+        return [PollingServer(5000, 2000, 2000, self.ET)]
 
     def run(self):
         # alpha -> bandwidth
         # Delta -> delay
         # need to find out the way to calculate Cp, Tp, Dp
-        Cp = 1
-        Tp = 1
-        Dp = 1
+        Cp = self.PS[0].budget
+        Tp = self.PS[0].period
+        Dp = self.PS[0].deadline
         delta = Tp + Dp -2 * Cp
         alpha = Cp / Tp
         
-        supply = 0
-        demand = 0
+        #supply = 0
+        #demand = 0
         
         P = [0]*len(self.ET)
         T = lcm(*[obj.period for obj in self.ET])
@@ -34,7 +39,7 @@ class EDP:
                 demand = 0
                 for j, _ in enumerate(self.ET):
                     if P[j] >= P[i]:
-                        demand = demand + (t / Period[j]) * C[j]
+                        demand = demand + ceil(t / Period[j]) * C[j]
                 
                 if supply >= demand:
                     responseTime = t
@@ -43,7 +48,6 @@ class EDP:
             
             if responseTime > D[i]:
                 return False, responseTime
-        
         return True, responseTime
                     
 
