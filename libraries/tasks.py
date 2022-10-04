@@ -1,3 +1,7 @@
+from matplotlib.pyplot import eventplot
+from pip import main
+from math import gcd, lcm 
+
 class Event:
     def __init__(self, name, duration, period, deadline) -> None:
         self.name = name
@@ -6,8 +10,8 @@ class Event:
         self.deadline = deadline
 
     def __repr__(self):
-        pass
-
+       pass
+       
 class TT(Event):
     def __init__(self, name, duration, period, deadline) -> None:
         super().__init__(name, duration, period, deadline)
