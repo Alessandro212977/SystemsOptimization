@@ -1,7 +1,5 @@
 # load task from file
 
-
-from ast import main
 from math import gcd, lcm 
 import dataloader
 
@@ -25,6 +23,7 @@ class EDF:
         
 
     def run(self):
+        # LCM of TT task periods
         T = lcm(*[obj.period for obj in self.TT] )
         t=0
         sigma = ["idle"]*T
@@ -42,6 +41,7 @@ class EDF:
                     if t-R[i] >= WCRT[i]:
                         WCRT[i] = t - R[i]
                         #print("WCRT:", WCRT[i])
+
                 if t%task.period == 0:
                     R[i] = t
                     C[i] = task.duration 
@@ -50,7 +50,7 @@ class EDF:
                     print("t:", t, "Im here task:", i, "deadline", task.deadline)
 
             if all(v == 0 for v in C):
-                sigma[t] = "idle"
+                sigma[t] = "Idle"
             else:
                 earliest_deadline = min(D_copy)
                 deadline_index = D_copy.index(earliest_deadline)
@@ -71,26 +71,11 @@ class EDF:
                     sigma[t] = deadline_index
                     C[deadline_index] -= 1
             t += 1
+            
         if all(v > 0 for v in C):
-            return "empty"
+            return "Empty"
         
         return sigma, WCRT
 if __name__ == "__main__":
     edf = EDF("./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv")
     print(edf.run())
-
-#def load_task():
-#     lines = []
-#     tasks = []
-#     #rawdata = open('asset/tasks.txt', 'r')
-#     #rawdata.seek(45)
-#     tt_data = open('asset/tt.txt','r')
-#     tt_data.seek(10)
-#     data = tt_data.readlines()
-#     for d in data:
-#         lines.append(d.strip('\n'))
-#     for line in lines:
-#         tasks.append(list(line.split(",")))
-    
-#     return tasks
-        

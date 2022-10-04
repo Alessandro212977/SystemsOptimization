@@ -15,6 +15,7 @@ class DataLoader:
                 TTtasks.append(TT(row["name"], row["duration"], row["period"], row["deadline"]))
             else:
                 ETtasks.append(ET(row["name"], row["duration"], row["period"], row["deadline"], row["priority"]))
+        
         return TTtasks, ETtasks
 
 
