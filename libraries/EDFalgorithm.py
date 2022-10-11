@@ -2,11 +2,13 @@
 
 from math import gcd, lcm 
 import dataloader
+from libraries.pollingserver import PollingServer
 
 class EDF:
     def __init__(self, path) -> None:
         dl = dataloader.DataLoader(path)
         self.TT, self.ET = dl.loadFile()
+        self.TT.append(PollingServer(5000, 2000, 5000, self.ET))
         #self.TT = self.TT[:5]
         #self.ET = self.ET[:5]
     
@@ -20,6 +22,9 @@ class EDF:
             lcm = int(lcm * t/gcd(lcm, t))
 
         return lcm
+
+    def schedulepollingserver(self):
+        pass
         
 
     def run(self):
