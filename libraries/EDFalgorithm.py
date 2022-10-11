@@ -60,22 +60,3 @@ class EDF:
 if __name__ == "__main__":
     edf = EDF("./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv")
     print(edf.run())
-<<<<<<< HEAD
-
-#def load_task():
-#     lines = []
-#     tasks = []
-#     #rawdata = open('asset/tasks.txt', 'r')
-#     #rawdata.seek(45)
-#     tt_data = open('asset/tt.txt','r')
-#     tt_data.seek(10)
-#     data = tt_data.readlines()
-#     for d in data:
-#         lines.append(d.strip('\n'))
-#     for line in lines:
-#         tasks.append(list(line.split(",")))
-    
-#     return tasks
-        
-=======
->>>>>>> b308003064822be2989acb384c8ecc1f7e245683
