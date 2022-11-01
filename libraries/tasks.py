@@ -1,3 +1,5 @@
+from math import gcd, lcm 
+
 class Event:
     def __init__(self, name, duration, period, deadline) -> None:
         self.name = name
