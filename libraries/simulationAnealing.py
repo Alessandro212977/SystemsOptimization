@@ -3,9 +3,8 @@ Simulated Annealing Class
 """
 import random
 import math
-from pollingserver import PollingServer as ps
-from ETalgorithm import EDP
-from EDFalgorithm import EDF
+from libraries.algorithms import EDF, EDP
+from libraries.tasks import PollingServer
 
 class SimulatedAnnealing:
     def __init__(self, pollingserver, initialTemp, finalTemp, tempReduction, neighborOperator,TTtasks , iterationPerTemp=100, alpha=10, beta=5):
