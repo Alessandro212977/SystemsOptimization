@@ -10,7 +10,7 @@ class EDP:
         self.PS = self.initialize() #list of polling servers
 
     def initialize(self):
-        return [PollingServer(5000, 2000, 2000, self.ET)]
+        return [PollingServer(5000, 2000, 2000, self.ET, "polling_server")]
 
     def run(self):
         # alpha -> bandwidth

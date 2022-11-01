@@ -1,7 +1,7 @@
 # load task from file
 
 from math import gcd, lcm
-from winsound import PlaySound 
+from telnetlib import theNULL
 import dataloader
 from pollingserver import PollingServer as ps
 
@@ -10,7 +10,7 @@ class EDF:
         dl = dataloader.DataLoader(path)
         self.TT, self.ET = dl.loadFile()
         self.poll_server = ps(5, 2000, 5000, self.ET, "polling_server")
-        self.TT.append(poll_server)
+        self.TT.append(self.poll_server)
         #self.TT = self.TT[:5]
         #self.ET = self.ET[:5]
     
@@ -72,9 +72,11 @@ class EDF:
                     #print("deadline index:", deadline_index, "C", C[deadline_index], D_copy)
                     #print(" index of task:", earliest_deadline, D.index(earliest_deadline), D.index(D[deadline_index]), D)
                     #print()
-                    if (C[deadline_index] == 0):
-                        #print("reset", C[deadline_index])
-                        D_copy[deadline_index] = 100000000   
+                    # if C[deadline_index] == 0 and D[deadline_index] >= t:
+                    #     #print("reset", C[deadline_index])
+                    #     if t - R[deadline_index] >= WCRT[deadline_index]:
+                    #         WCRT[deadline_index] = t - R[deadline_index]
+                        #D_copy[deadline_index] = 100000000   
                 else:
                     #print("im inside the else", deadline_index)
                     D_copy[deadline_index] = 100000000
@@ -91,3 +93,10 @@ class EDF:
 if __name__ == "__main__":
     edf = EDF("./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv")
     print(edf.run())
+    
+    lst = edf.run()
+    file1 = open("MyFile.txt", "w") 
+    for line in lst:
+        file1.writelines(str(line))
+        
+    
