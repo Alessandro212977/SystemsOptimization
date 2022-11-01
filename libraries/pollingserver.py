@@ -1,9 +1,12 @@
 class PollingServer:
-    def __init__(self, budget, period, deadline, tasks) -> None:
-        self.budget = budget
+    def __init__(self, duration, period, deadline, tasks, name) -> None:
+        self.duration = duration
         self.period = period
         self.deadline = deadline
         self.tasks = tasks
+        self.name = name
 
     def getTask(self):
-        pass
+        for obj in self.tasks:
+            if obj.period == self.period:
+                return obj

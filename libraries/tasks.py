@@ -1,5 +1,3 @@
-from matplotlib.pyplot import eventplot
-from pip import main
 from math import gcd, lcm 
 
 class Event:
