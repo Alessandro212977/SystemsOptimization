@@ -1,14 +1,16 @@
 # load task from file
 
-from math import gcd, lcm 
+from math import gcd, lcm
+from winsound import PlaySound 
 import dataloader
-from libraries.pollingserver import PollingServer
+from pollingserver import PollingServer as ps
 
 class EDF:
     def __init__(self, path) -> None:
         dl = dataloader.DataLoader(path)
         self.TT, self.ET = dl.loadFile()
-        self.TT.append(PollingServer(5000, 2000, 5000, self.ET))
+        self.poll_server = ps(5, 2000, 5000, self.ET, "polling_server")
+        self.TT.append(poll_server)
         #self.TT = self.TT[:5]
         #self.ET = self.ET[:5]
     
@@ -24,6 +26,7 @@ class EDF:
         return lcm
 
     def schedulepollingserver(self):
+        
         pass
         
 
@@ -36,6 +39,7 @@ class EDF:
         WCRT = [0]*len(self.TT)
         C = [obj.duration for obj in self.TT]
         D = [obj.deadline for obj in self.TT]
+        N = [obj.name for obj in self.TT]
         D_copy = [obj.deadline for obj in self.TT]
         while t < T:
             for i, task in enumerate(self.TT):
@@ -52,21 +56,24 @@ class EDF:
                     C[i] = task.duration 
                     D[i] = t + task.deadline
                     D_copy[i] = t + task.deadline
-                    print("t:", t, "Im here task:", i, "deadline", task.deadline)
-
+                    
+                    #print("t:", t, "Im here task:", i, "deadline", task.deadline)
+                    
             if all(v == 0 for v in C):
                 sigma[t] = "Idle"
             else:
                 earliest_deadline = min(D_copy)
                 deadline_index = D_copy.index(earliest_deadline)
                 if(C[deadline_index] > 0):
+                    if (N[deadline_index] == 'polling_server'):
+                        self.poll_server.getTask()
                     sigma[t] = deadline_index
                     C[deadline_index] -= 1  
-                    print("deadline index:", deadline_index, "C", C[deadline_index], D_copy)
-                    print(" index of task:", earliest_deadline, D.index(earliest_deadline), D.index(D[deadline_index]), D)
-                    print()
+                    #print("deadline index:", deadline_index, "C", C[deadline_index], D_copy)
+                    #print(" index of task:", earliest_deadline, D.index(earliest_deadline), D.index(D[deadline_index]), D)
+                    #print()
                     if (C[deadline_index] == 0):
-                        print("reset", C[deadline_index])
+                        #print("reset", C[deadline_index])
                         D_copy[deadline_index] = 100000000   
                 else:
                     #print("im inside the else", deadline_index)
