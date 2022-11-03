@@ -189,11 +189,14 @@ if __name__ == "__main__":
         h = h + 10
           
     
-    # gnt.broken_barh([(110, 30), (150, 10)], (50, 9), facecolors='tab:blue')
-    # gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors='tab:orange')
+    gnt.broken_barh([(110, 30), (150, 10)], (50, 9), facecolors='tab:blue')
+    gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors='tab:orange')
     
     
     plt.show()
+    
+    
+    
     
     
     
@@ -213,3 +216,5 @@ if __name__ == "__main__":
     #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors =('tab:red'))
     
     # plt.savefig("gantt1.png")
+    
+    
