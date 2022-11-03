@@ -2,8 +2,18 @@
 
 from math import gcd, lcm
 from telnetlib import theNULL
+
+from matplotlib.cbook import index_of
 import dataloader
 from pollingserver import PollingServer as ps
+import plotly.express as px
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import xlsxwriter
+
+
+import matplotlib.ticker as ticker
 
 class EDF:
     def __init__(self, path) -> None:
@@ -28,7 +38,11 @@ class EDF:
     def schedulepollingserver(self):
         
         pass
-        
+    
+    def getDuration(self, task):
+        for obj in self.TT:
+            if obj.name == task:
+                return obj.duration
 
     def run(self):
         # LCM of TT task periods
@@ -99,4 +113,103 @@ if __name__ == "__main__":
     for line in lst:
         file1.writelines(str(line))
         
+    x = [1, 1, 1, 1, 6, 6, 6,1 ,1 , 1,1 ]
     
+    book = xlsxwriter.Book('test.xlsx')     
+    sheet = book.add_sheet()   
+    row = 0
+    column = 0
+    
+    for i in x:
+        sheet.write(row, column, i)
+        
+        row += 1
+    
+    
+    
+
+    # df = any
+    # for i in x:
+    #     duration = edf.getDuration("tTT"+str(i))
+    #     plt.figure(figsize=(8,4))
+    #     plt.barh(y="Task"+str(i), left = 0, width=duration)
+    #     left = duration - 1
+        
+    #     # plt.show()
+        
+    
+    plt.rcParams["figure.figsize"] = [7.50, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    fig, gnt = plt.subplots()
+ 
+    # Setting Y-axis limits
+    gnt.set_ylim(0, 27)
+    # Setting X-axis limits
+    gnt.set_xlim(0, 27)
+    
+    # Setting labels for x-axis and y-axis
+    gnt.set_xlabel('Duration')
+    gnt.set_ylabel('Tasks')
+    
+    plt.xscale("linear")
+    plt.xticks(np.arange(min(x), max(x)+1, 1.0))
+    #gnt.set_yticks([0, 1, 2])
+    
+    
+    y_ticklables = []
+    
+    for obj in edf.TT:
+        taskname =  "Task" + str(obj.name[-1])
+        y_ticklables.append(taskname)
+    gnt.set_yticklabels(y_ticklables)
+    
+    print(len(y_ticklables))
+    
+    # x_ticklables = []
+    # for i in range(0, 100):
+    #     x_ticklables.append(i)
+        
+    # gnt.set_xticklabels(x_ticklables)
+    
+
+    # Declaring a bar in schedule
+    
+    
+   
+
+        
+    h = 10 
+    lst = []
+    start = 0
+    for i in x:
+        
+        lst.append((start, 4))
+        gnt.broken_barh(lst, (h, 5), facecolors='tab:blue')
+        start = start + 4
+        h = h + 10
+          
+    
+    # gnt.broken_barh([(110, 30), (150, 10)], (50, 9), facecolors='tab:blue')
+    # gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors='tab:orange')
+    
+    
+    plt.show()
+    
+    
+    
+    #gnt.grid(True)
+    # Setting ticks on y-axis
+    #gnt.set_yticks([15, 25, 35])
+    # Labelling tickes of y-axis
+    
+   
+    
+    
+    # Setting graph attribute
+    
+     #Declaring multiple bars in at same level and same width
+    #gnt.broken_barh([(110, 10), (150, 10)], (10, 9),facecolors ='tab:blue')
+    
+    #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors =('tab:red'))
+    
+    # plt.savefig("gantt1.png")
