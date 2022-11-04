@@ -1,19 +1,11 @@
 # load task from file
 
 from math import gcd, lcm
-from telnetlib import theNULL
-
-from matplotlib.cbook import index_of
 import dataloader
 from pollingserver import PollingServer as ps
-import plotly.express as px
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import xlsxwriter
-
-
-import matplotlib.ticker as ticker
+from collections import defaultdict
 
 class EDF:
     def __init__(self, path) -> None:
@@ -104,117 +96,65 @@ class EDF:
             return "Empty"
         
         return sigma, WCRT
+    
+    def plotsheduling(self, sigma):
+        
+        plt.rcParams["figure.figsize"] = [20, 7]
+        plt.rcParams["figure.autolayout"] = True
+        
+        fig, gnt = plt.subplots()
+        gnt.set_title("Task Scheduling")
+    
+        # Setting Y-axis limits
+        gnt.set_ylim(0, 27)
+        # Setting X-axis limits
+        gnt.set_xlim(0, 27)
+        
+        # Setting labels for x-axis and y-axis
+        gnt.set_xlabel('Duration')
+        gnt.set_ylabel('Tasks')
+        
+        #plt.xscale("linear")
+        #plt.xticks(np.arange(min(x), max(x)-1, 1.0))
+        plt.xticks(np.arange(0, 100, 1.0))
+        
+        
+        y_ticklables = []
+        for obj in self.TT:
+            taskname =  "Task" + str(obj.name[3:])
+            y_ticklables.append(taskname)
+        gnt.set_yticklabels(y_ticklables)
+        
+        plt.yticks(np.arange(0, len(y_ticklables), 1.0))
+            
+        res = defaultdict(list)
+        for ele in range(len(sigma)):
+            if sigma[ele] != "Idle":
+                res[sigma[ele]].append(ele)
+
+        cmap = self._get_cmap(len(res))
+        for key, value in res.items():
+            lst = []
+            v = 0
+            if key < 30:
+                while (v < len(value)):
+                    t = self.getDuration("tTT"+str(key))
+                    lst.append((value[v] , t))
+                    v = v + t
+               
+            gnt.broken_barh(lst, (key, 1), facecolors= cmap(key))
+            
+        gnt.grid(True)
+        plt.savefig("sheduling.png")
+        plt.show()
+        
+
+    def _get_cmap(self, n, name='hsv'):
+        return plt.cm.get_cmap(name, n) 
+
 if __name__ == "__main__":
     edf = EDF("./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv")
-    print(edf.run())
-    
-    lst = edf.run()
-    file1 = open("MyFile.txt", "w") 
-    for line in lst:
-        file1.writelines(str(line))
-        
-    x = [1, 1, 1, 1, 6, 6, 6,1 ,1 , 1,1 ]
-    
-    book = xlsxwriter.Book('test.xlsx')     
-    sheet = book.add_sheet()   
-    row = 0
-    column = 0
-    
-    for i in x:
-        sheet.write(row, column, i)
-        
-        row += 1
-    
-    
-    
-
-    # df = any
-    # for i in x:
-    #     duration = edf.getDuration("tTT"+str(i))
-    #     plt.figure(figsize=(8,4))
-    #     plt.barh(y="Task"+str(i), left = 0, width=duration)
-    #     left = duration - 1
-        
-    #     # plt.show()
-        
-    
-    plt.rcParams["figure.figsize"] = [7.50, 3.50]
-    plt.rcParams["figure.autolayout"] = True
-    fig, gnt = plt.subplots()
- 
-    # Setting Y-axis limits
-    gnt.set_ylim(0, 27)
-    # Setting X-axis limits
-    gnt.set_xlim(0, 27)
-    
-    # Setting labels for x-axis and y-axis
-    gnt.set_xlabel('Duration')
-    gnt.set_ylabel('Tasks')
-    
-    plt.xscale("linear")
-    plt.xticks(np.arange(min(x), max(x)+1, 1.0))
-    #gnt.set_yticks([0, 1, 2])
-    
-    
-    y_ticklables = []
-    
-    for obj in edf.TT:
-        taskname =  "Task" + str(obj.name[-1])
-        y_ticklables.append(taskname)
-    gnt.set_yticklabels(y_ticklables)
-    
-    print(len(y_ticklables))
-    
-    # x_ticklables = []
-    # for i in range(0, 100):
-    #     x_ticklables.append(i)
-        
-    # gnt.set_xticklabels(x_ticklables)
-    
-
-    # Declaring a bar in schedule
-    
-    
-   
-
-        
-    h = 10 
-    lst = []
-    start = 0
-    for i in x:
-        
-        lst.append((start, 4))
-        gnt.broken_barh(lst, (h, 5), facecolors='tab:blue')
-        start = start + 4
-        h = h + 10
-          
-    
-    gnt.broken_barh([(110, 30), (150, 10)], (50, 9), facecolors='tab:blue')
-    gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors='tab:orange')
-    
-    
-    plt.show()
-    
-    
-    
-    
-    
-    
-    #gnt.grid(True)
-    # Setting ticks on y-axis
-    #gnt.set_yticks([15, 25, 35])
-    # Labelling tickes of y-axis
-    
-   
-    
-    
-    # Setting graph attribute
-    
-     #Declaring multiple bars in at same level and same width
-    #gnt.broken_barh([(110, 10), (150, 10)], (10, 9),facecolors ='tab:blue')
-    
-    #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9), facecolors =('tab:red'))
-    
-    # plt.savefig("gantt1.png")
-    
+    table, wcrt = edf.run()
+    edf.plotsheduling(table)
+    print(table, wcrt)
     
