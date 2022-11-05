@@ -1,10 +1,9 @@
 
-from dataloader import DataLoader
-
+from libraries.dataloader import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
-from algorithms import *
+from libraries.algorithms import *
 
 def plotTTtask(TT, sigma):
     plt.rcParams["figure.figsize"] = [20, 7]
