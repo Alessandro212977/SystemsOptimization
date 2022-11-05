@@ -1,5 +1,5 @@
 from libraries.tasks import PollingServer
-import libraries.dataloader as dataloader
+import dataloader
 from math import lcm, ceil
 
 def EDF(tasks):
@@ -108,5 +108,5 @@ if __name__ == "__main__":
     ps = PollingServer(duration=1800, period=2000, deadline=2000, tasks=ET)
     
     print(EDP(ps))
-    # print(EDF(TT))
+    print(EDF(TT))
         
