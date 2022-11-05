@@ -8,7 +8,7 @@ class Event:
         self.deadline = deadline
 
     def __repr__(self):
-       pass
+       return "Name: {}, duration: {}, period: {}, deadline: {}".format(self.name, self.duration, self.period, self.deadline)
        
 class TT(Event):
     def __init__(self, name, duration, period, deadline) -> None:
