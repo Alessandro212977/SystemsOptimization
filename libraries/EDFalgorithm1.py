@@ -1,7 +1,7 @@
 # load task from file
 
 from math import gcd, lcm
-import dataloader
+from dataloader import DataLoader
 from pollingserver import PollingServer as ps
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ from collections import defaultdict
 
 class EDF:
     def __init__(self, path) -> None:
-        dl = dataloader.DataLoader(path)
+        dl = DataLoader(path)
         self.TT, self.ET = dl.loadFile()
         self.poll_server = ps(5, 2000, 5000, self.ET, "polling_server")
         self.TT.append(self.poll_server)
