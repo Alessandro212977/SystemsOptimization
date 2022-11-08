@@ -11,7 +11,7 @@ def EDF(tasks):
     WCRT = [0]*len(tasks)
     C = [obj.duration for obj in tasks]
     D = [obj.deadline for obj in tasks]
-    #N = [obj.name for obj in tasks]
+    #N = [obj.name for obj in tasks]gi
     D_copy = [obj.deadline for obj in tasks]
     while t < T:
         for i, task in enumerate(tasks):
