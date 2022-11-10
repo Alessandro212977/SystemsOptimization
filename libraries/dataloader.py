@@ -1,13 +1,13 @@
 import pandas as pd
 from libraries.tasks import TT, ET
 
-class DataLoader:
 
+class DataLoader:
     def __init__(self, path) -> None:
         self.path = path
 
     def loadFile(self):
-        data = pd.read_csv(self.path, sep = ";")
+        data = pd.read_csv(self.path, sep=";")
         TTtasks = []
         ETtasks = []
         for __, row in data.iterrows():
@@ -15,7 +15,7 @@ class DataLoader:
                 TTtasks.append(TT(row["name"], row["duration"], row["period"], row["deadline"]))
             else:
                 ETtasks.append(ET(row["name"], row["duration"], row["period"], row["deadline"], row["priority"]))
-        
+
         return TTtasks, ETtasks
 
 
