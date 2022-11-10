@@ -10,39 +10,44 @@ def plotTTtask(TT, sigma, xmax=None):
     plt.rcParams["figure.figsize"] = [20, 7]
     plt.rcParams["figure.autolayout"] = True
     
-    fig, gnt = plt.subplots()
-    gnt.set_title("Task Scheduling")
+    fig, ax = plt.subplots()
+    ax.set_title("Task Scheduling")
 
     #X-axis
     if xmax:
-        gnt.set_xlim(0, xmax)
+        ax.set_xlim(0, xmax)
         plt.xticks(np.arange(0, xmax, xmax//30))
-        gnt.set_xlabel('Duration')
+        ax.set_xlabel('Duration')
         
     #Y-axis
     y_ticklables = [obj.name for obj in TT]
     plt.yticks(np.arange(0, len(y_ticklables), 1.0))
-    gnt.set_yticklabels(y_ticklables, va="bottom")
-    gnt.set_ylim(0, len(y_ticklables))
-    gnt.set_ylabel('Tasks')
+    ax.set_yticklabels(y_ticklables, va="bottom")
+    ax.set_ylim(0, len(y_ticklables))
+    ax.set_ylabel('Tasks')
         
     #data
     res = defaultdict(list)
-    for i, value in enumerate(sigma):
-        if value != "Idle":
-            res[value].append(i)
+    current_val = sigma[0]
+    starting_idx = 0
+    length = 1
+    for i, val in enumerate(sigma[1:]):
+        if val == current_val:
+            length += 1
+        else:
+            res[current_val].append((starting_idx, length))
+            length = 1
+            starting_idx = i+1
+            current_val = val
+    res[current_val].append((starting_idx, length))
 
     cmap = plt.cm.get_cmap('hsv', len(res))
     for key, value in res.items():
-        lst = []
-        v = 0
-        while (v < len(value)):
-            t = {i: obj.duration for i, obj in enumerate(TT)}[key]
-            lst.append((value[v] , t))
-            v += t
-        gnt.broken_barh(lst, (key, 1), facecolors= cmap(key))
+        if key=="Idle":
+            continue
+        ax.broken_barh(value, (key, 1), facecolors=cmap(key))
         
-    gnt.grid(True)
+    ax.grid(True)
     plt.savefig("sheduling.png")
     plt.show()
      
@@ -84,7 +89,7 @@ if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = DataLoader(path)
     TT, ET  = dl.loadFile()
-    ps = PollingServer("ps", duration=18, period=2000, deadline=2000, tasks=ET)
+    ps = PollingServer("ps", duration=18, period=200, deadline=2000, tasks=ET)
     sigma, WCRT = EDF(TT+[ps])
     #print(sigma, WCRT)
     plotTTtask(TT+[ps], sigma)

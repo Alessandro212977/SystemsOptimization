@@ -7,7 +7,6 @@ import numpy as np
 from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
 from libraries.tasks import PollingServer
-from sklearn import preprocessing
 import matplotlib.pyplot as plt
 from sympy import divisors
 from math import lcm
@@ -59,7 +58,7 @@ class SimulatedAnnealing:
 
     def isTerminationCriteriaMet(self):
         # can add more termination criteria
-        return self.currTemp <= self.finalTemp or self.neighborOperator(self.solution) == 0
+        return self.currTemp <= self.finalTemp
 
     def run(self):
         while not self.isTerminationCriteriaMet():
@@ -67,13 +66,7 @@ class SimulatedAnnealing:
             for i in range(self.iterationPerTemp):
                 # pick a random neighbor
                 newSolution = self.neighborOperator(self.solution)
-                schedule, responsetime = EDP(newSolution)
-                sigma, wrct= EDF(self.TTtasks+[newSolution])
-                while(not (schedule and sigma)):
-                    newSolution = self.neighborOperator(self.solution)
-                    schedule, responsetime = EDP(newSolution)
-                    sigma, wrct= EDF(self.TTtasks+[newSolution])
-
+                
                 # get the cost between the two solutions
                 __, wrctSolution= EDF(self.TTtasks+[self.solution])
                 __, responsetime = EDP(self.solution)
@@ -105,7 +98,6 @@ class SimulatedAnnealing:
             ax.set_xlabel("Iterations")
             ax.set_ylabel(feature)
             ax.set_title(feature)
-        
         plt.show()
 
     def printSolution(self):
@@ -118,22 +110,31 @@ class SimulatedAnnealing:
         return False
 
     def computeCost(self, wcrt, response, duration, weight=0.5):
-        #np.mean(duration/self.hyperperiod)
         return weight*np.mean(wcrt)/self.hyperperiod + (1-weight)*response/self.hyperperiod# + 0.3*np.mean(duration/self.hyperperiod)
-        norm = preprocessing.normalize([np.array([np.mean(wcrt), response])])[0]
-        return weight*np.mean(norm[0]) + (1-weight)*norm[1]
 
     def neighborOperator(self, center):
-        new_duration = center.duration + random.randint(-10, 10)*10
-        new_period = self.period_divisors[self.period_divisors.index(center.period) + random.choice([-1, 0, 1])]
-        new_deadline = self.period_divisors[self.period_divisors.index(center.deadline) + random.choice([-1, 0, 1])]
-        return PollingServer(center.name, new_duration, new_period, new_deadline, center.tasks)
+        def getrandomneighbor():
+            new_duration = center.duration + random.randint(-10, 10)*10
+            new_period = self.period_divisors[self.period_divisors.index(center.period) + random.choice([-1, 0, 1])]
+            new_deadline = self.period_divisors[self.period_divisors.index(center.deadline) + random.choice([-1, 0, 1])]
+            return PollingServer(center.name, new_duration, new_period, new_deadline, center.tasks)
+
+        neighbor = getrandomneighbor()
+        while(not self.isValidNeighbor(neighbor)):
+            neighbor = getrandomneighbor()
+       
+        return neighbor
+    
+    def isValidNeighbor(self, neighbor) -> bool:
+        schedule, responsetime = EDP(neighbor)
+        sigma, wrct= EDF(self.TTtasks+[neighbor])
+        return schedule and sigma and neighbor.duration <= neighbor.period
 
 if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET  = dl.loadFile()
-    #TT, ET = TT[:10], ET[:10]
+    TT, ET = TT, ET[:5]
     init_ps = PollingServer("Polling Server", 1300, 2000, 2000, ET)
 
     sa = SimulatedAnnealing(TT, init_ps)
