@@ -19,6 +19,9 @@ class ET(Event):
         super().__init__(name, duration, period, deadline)
         self.priority = priority
 
+    def __repr__(self):
+        return super().__repr__() + ", priority: {}".format(self.priority)
+
 class PollingServer(Event):
     def __init__(self, name, duration, period, deadline, tasks) -> None:
         super().__init__(name, duration, period, deadline)

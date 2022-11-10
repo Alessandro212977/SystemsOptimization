@@ -130,49 +130,41 @@ def EDF(tasks):
 
 
 def EDP(ps: PollingServer):
-    # alpha -> bandwidth
-    # Delta -> delay
-    # need to find out the way to calculate Cp, Tp, Dp
-    Cp = ps.duration  # =budget?
-    Tp = ps.period
-    Dp = ps.deadline
-    delta = Tp + Dp - 2 * Cp
-    alpha = Cp / Tp
+    delta = ps.period + ps.deadline - 2 * ps.duration
+    alpha = ps.duration / ps.period
+    #print(delta, alpha)
 
-    # supply = 0
-    # demand = 0
-
-    P = [0] * len(ps.tasks)
     T = lcm(*[obj.period for obj in ps.tasks])
-    Period = [obj.period for obj in ps.tasks]
-    C = [obj.duration for obj in ps.tasks]
-    D = [obj.deadline for obj in ps.tasks]
-    # print(T)
-    for i, task in enumerate(ps.tasks):
-        t = 0
-        responseTime = D[i] + 1
-        while t <= T:
-            supply = alpha * (t - delta)
-            demand = 0
-            for j, _ in enumerate(ps.tasks):
-                if P[j] >= P[i]:
-                    demand = demand + ceil(t / Period[j]) * C[j]
+    #print("T:", T)
+    WCRT = [T]*len(ps.tasks)
+    schedulable = True
 
+    for i, ETtask1 in enumerate(ps.tasks):
+        t = 1
+        #print(ETtask1)
+        while t <= T:
+            supply = max(0, alpha * (t - delta))
+            demand = 0
+            for ETtask2 in ps.tasks:
+                if ETtask2.priority >= ETtask1.priority:
+                    demand += ceil(t / ETtask2.period) * ETtask2.duration
+
+            #print("t: {}, supply {}, demand {}".format(t, supply, demand))
             if supply >= demand:
-                responseTime = t
+                WCRT[i] = t
                 break
             t += 1
 
-        if responseTime > D[i]:
-            return False, responseTime
-    return True, responseTime
+        if WCRT[i] > ETtask1.deadline:
+            schedulable = False
+    return schedulable, WCRT
 
 
 if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
-    ps = PollingServer("ps", duration=1800, period=2000, deadline=2000, tasks=ET)
+    ps = PollingServer("ps", duration=500, period=2000, deadline=50, tasks=ET)
 
     print(EDP(ps))
-    print(EDF(TT + [ps]))
+    #print(EDF(TT + [ps]))

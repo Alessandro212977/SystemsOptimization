@@ -122,12 +122,12 @@ class SimulatedAnnealing:
             return random.random() < math.exp(-cost / self.currTemp)
         return False
 
-    def computeCost(self, solution, params=["wcrt", "response", "duration"], weights=[0, 1, 0]):
+    def computeCost(self, solution, params=["wcrt_tt", "wcrt_et", "duration"], weights=[0.2, 0.4, 0.4]):
         assert sum(weights) == 1.0
 
         params_dict = {
-            "wcrt": np.mean(EDF(self.TTtasks + [solution])[1]),
-            "response": EDP(solution)[1],
+            "wcrt_tt": np.mean(EDF(self.TTtasks + [solution])[1]),
+            "wcrt_et": np.mean(EDP(solution)[1]),
             "duration": solution.duration,
         }
         cost = 0
@@ -150,16 +150,16 @@ class SimulatedAnnealing:
         return neighbor
 
     def isValidNeighbor(self, neighbor) -> bool:
-        schedule, __ = EDP(neighbor)
+        schedulable, __ = EDP(neighbor)
         sigma, __ = EDF(self.TTtasks + [neighbor])
-        return schedule and sigma and neighbor.duration <= neighbor.period and neighbor.deadline <= neighbor.period
+        return schedulable and sigma and neighbor.duration <= neighbor.period and neighbor.deadline <= neighbor.period
 
 
 if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
-    TT, ET = TT, ET[:5]
+    #TT, ET = TT, ET[:5]
     init_ps = PollingServer("Polling Server", 1200, 1500, 1500, ET)
 
     sa = SimulatedAnnealing(TT, init_ps)
@@ -168,8 +168,8 @@ if __name__ == "__main__":
         sa.run(bar)
 
     sigma, wcrtNewSolution = EDF(TT + [sa.solution])
-    schedule, responsetimeNew = EDP(sa.solution)
-    logging.debug(wcrtNewSolution, schedule, responsetimeNew)
+    schedulable, responsetimeNew = EDP(sa.solution)
+    logging.debug(wcrtNewSolution, schedulable, responsetimeNew)
 
     sa.printSolution()
     sa.plotSolution()

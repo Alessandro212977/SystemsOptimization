@@ -7,17 +7,18 @@ from libraries.algorithms import *
 from numpy import arange
     
 def plotTTtask(TT, sigma, xmax=None):
-    plt.rcParams["figure.figsize"] = [20, 7]
+    plt.rcParams["figure.figsize"] = [16, 7]
     plt.rcParams["figure.autolayout"] = True
     
     fig, ax = plt.subplots()
     ax.set_title("Task Scheduling")
 
     #X-axis
-    if xmax:
-        ax.set_xlim(0, xmax)
-        plt.xticks(np.arange(0, xmax, xmax//30))
-        ax.set_xlabel('Duration')
+    if not xmax:
+        xmax = lcm(*[obj.period for obj in TT])
+    ax.set_xlim(0-0.01*xmax, xmax+0.01*xmax)
+    plt.xticks(np.arange(0, xmax+xmax//12, xmax//12))
+    ax.set_xlabel('Duration')
         
     #Y-axis
     y_ticklables = [obj.name for obj in TT]
