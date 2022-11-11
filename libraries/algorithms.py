@@ -1,6 +1,7 @@
 from libraries.tasks import PollingServer
 import libraries.dataloader as dataloader
 from math import lcm, ceil
+import numpy as np
 
 
 def EDF2(tasks):
@@ -69,7 +70,7 @@ def EDF2(tasks):
     return sigma, WCRT
 
 
-def EDF(tasks):
+def EDFold(tasks):
     # LCM of TT task periods
     T = lcm(*[obj.period for obj in tasks])
     t = 0
@@ -129,6 +130,43 @@ def EDF(tasks):
     return sigma, WCRT
 
 
+def EDF(tasks):
+    # LCM of TT task periods
+    schedulable = True
+    T = lcm(*[obj.period for obj in tasks])
+    t = 0
+    timetable = ["idle"] * T
+    releases = [0] * len(tasks) #release time
+    wcrt = [-1] * len(tasks) #-1 = deadline missed
+    durations = [obj.duration for obj in tasks] #durations
+    deadlines = [obj.deadline for obj in tasks] #deadlines
+    while t < T:
+
+        for i, task in enumerate(tasks):
+            if durations[i] > 0 and deadlines[i] <= t:
+                schedulable = False
+
+            if t % task.period == 0:
+                releases[i] = t
+                durations[i] = task.duration
+                deadlines[i] = t + task.deadline
+           
+        if not all(v == 0 for v in durations): #if there is some task to schedule:
+            ed_idx = np.argmin([dl if dr > 0 else 2*T for dl, dr in zip(deadlines, durations)])
+            timetable[t] = ed_idx
+            durations[ed_idx] -= 1
+            if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
+                if t-releases[ed_idx] >= wcrt[ed_idx]:
+                    wcrt[ed_idx] = t-releases[ed_idx]
+
+        t += 1
+
+    if all(v > 0 for v in durations):
+        schedulable = False
+        
+    return schedulable, timetable, wcrt
+
+
 def EDP(ps: PollingServer):
     delta = ps.period + ps.deadline - 2 * ps.duration
     alpha = ps.duration / ps.period
@@ -164,7 +202,7 @@ if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
-    ps = PollingServer("ps", duration=500, period=2000, deadline=50, tasks=ET)
+    ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
 
-    print(EDP(ps))
-    #print(EDF(TT + [ps]))
+    #print(EDP(ps))
+    print(EDF(TT + [ps]))

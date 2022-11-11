@@ -44,7 +44,7 @@ def plotTTtask(TT, sigma, xmax=None):
 
     cmap = plt.cm.get_cmap('hsv', len(res))
     for key, value in res.items():
-        if key=="Idle":
+        if key=="idle" or key=="Idle":
             continue
         ax.broken_barh(value, (key, 1), facecolors=cmap(key))
         
@@ -90,8 +90,8 @@ if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = DataLoader(path)
     TT, ET  = dl.loadFile()
-    ps = PollingServer("ps", duration=18, period=200, deadline=2000, tasks=ET)
-    sigma, WCRT = EDF(TT+[ps])
+    ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
+    schedulable, sigma, WCRT = EDF(TT+[ps])
     #print(sigma, WCRT)
     plotTTtask(TT+[ps], sigma)
     #plotSimulatedAnealing()
