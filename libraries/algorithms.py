@@ -2,6 +2,7 @@ from libraries.tasks import PollingServer
 import libraries.dataloader as dataloader
 from math import lcm, ceil
 import numpy as np
+import multiprocess as mp
 
 
 def EDF2(tasks):
@@ -152,7 +153,8 @@ def EDF(tasks):
                 deadlines[i] = t + task.deadline
            
         if not all(v == 0 for v in durations): #if there is some task to schedule:
-            ed_idx = np.argmin([dl if dr > 0 else 2*T for dl, dr in zip(deadlines, durations)])
+            tmp = [dl if dr > 0 else 2*T for dl, dr in zip(deadlines, durations)]
+            ed_idx = tmp.index(min(tmp))
             timetable[t] = ed_idx
             durations[ed_idx] -= 1
             if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
@@ -170,16 +172,13 @@ def EDF(tasks):
 def EDP(ps: PollingServer):
     delta = ps.period + ps.deadline - 2 * ps.duration
     alpha = ps.duration / ps.period
-    #print(delta, alpha)
 
     T = lcm(*[obj.period for obj in ps.tasks])
-    #print("T:", T)
     WCRT = [T]*len(ps.tasks)
     schedulable = True
 
     for i, ETtask1 in enumerate(ps.tasks):
         t = 1
-        #print(ETtask1)
         while t <= T:
             supply = max(0, alpha * (t - delta))
             demand = 0
@@ -187,7 +186,6 @@ def EDP(ps: PollingServer):
                 if ETtask2.priority >= ETtask1.priority:
                     demand += ceil(t / ETtask2.period) * ETtask2.duration
 
-            #print("t: {}, supply {}, demand {}".format(t, supply, demand))
             if supply >= demand:
                 WCRT[i] = t
                 break
@@ -197,12 +195,11 @@ def EDP(ps: PollingServer):
             schedulable = False
     return schedulable, WCRT
 
-
 if __name__ == "__main__":
     path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
     ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
 
-    #print(EDP(ps))
-    print(EDF(TT + [ps]))
+    print(EDP(ps))
+    #print(EDF(TT + [ps]))
