@@ -2,8 +2,6 @@ from libraries.tasks import PollingServer
 import libraries.dataloader as dataloader
 from math import lcm, ceil
 import numpy as np
-import multiprocess as mp
-
 
 def EDF2(tasks):
     # LCM of TT task periods
@@ -202,4 +200,4 @@ if __name__ == "__main__":
     ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
 
     print(EDP(ps))
-    #print(EDF(TT + [ps]))
+    print(EDF(TT + [ps]))
