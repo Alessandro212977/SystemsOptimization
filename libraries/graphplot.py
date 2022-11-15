@@ -87,10 +87,10 @@ def run(name):
         
     
 if __name__ == "__main__":
-    path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+    path = "./test_cases/taskset_small.csv"
     dl = DataLoader(path)
     TT, ET  = dl.loadFile()
-    ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
+    ps = PollingServer("ps", duration=1000, period=2000, deadline=1000, tasks=ET, separation=0)
     schedulable, sigma, WCRT = EDF(TT+[ps])
     #print(sigma, WCRT)
     plotTTtask(TT+[ps], sigma)

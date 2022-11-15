@@ -143,6 +143,7 @@ def EDF(tasks):
 
         for i, task in enumerate(tasks):
             if durations[i] > 0 and deadlines[i] <= t:
+                wcrt[i] = T-releases[i]
                 schedulable = False
 
             if t % task.period == 0:
@@ -153,6 +154,8 @@ def EDF(tasks):
         if not all(v == 0 for v in durations): #if there is some task to schedule:
             tmp = [dl if dr > 0 else 2*T for dl, dr in zip(deadlines, durations)]
             ed_idx = tmp.index(min(tmp))
+            #if(t%10==0):
+            #    print("t: {}, ed: {}, deadlines: {}, durations: {}, tmp: {}".format(t, ed_idx, deadlines, durations, tmp))
             timetable[t] = ed_idx
             durations[ed_idx] -= 1
             if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
@@ -161,8 +164,10 @@ def EDF(tasks):
 
         t += 1
 
-    if all(v > 0 for v in durations):
-        schedulable = False
+    if any(v > 0 for v in durations):
+        for idx in [i for i, response in enumerate(wcrt) if response == -1]:
+            wcrt[idx] = T-releases[idx]
+            schedulable = False
         
     return schedulable, timetable, wcrt
 
@@ -176,7 +181,7 @@ def EDP(ps: PollingServer):
     schedulable = True
 
     for i, ETtask1 in enumerate(ps.tasks):
-        t = 1
+        t = 0
         while t <= T:
             supply = max(0, alpha * (t - delta))
             demand = 0
@@ -184,7 +189,7 @@ def EDP(ps: PollingServer):
                 if ETtask2.priority >= ETtask1.priority:
                     demand += ceil(t / ETtask2.period) * ETtask2.duration
 
-            if supply >= demand:
+            if supply >= demand and t>0:
                 WCRT[i] = t
                 break
             t += 1
@@ -194,10 +199,16 @@ def EDP(ps: PollingServer):
     return schedulable, WCRT
 
 if __name__ == "__main__":
-    path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+    path = "./test_cases/taskset_small.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
-    ps = PollingServer("ps", duration=1800, period=2000, deadline=1000, tasks=ET)
+    params = [(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]#[(500, 2000, 2000), (500, 2000, 2000)]
+    init_ps = []
+    for idx, sep in enumerate(range(1, 4)):#max_sep+1):
+        tasks = [task for task in ET if task.separation==sep]
+        budget, period, deadline = params[idx]
+        init_ps.append(PollingServer("Polling Server", budget, period, deadline, tasks, separation=sep))
 
-    print(EDP(ps))
-    print(EDF(TT + [ps]))
+    print([EDP(ps) for ps in init_ps])
+    schedulable, timetable, wcrt = EDF(TT + init_ps)
+    print(schedulable, wcrt)

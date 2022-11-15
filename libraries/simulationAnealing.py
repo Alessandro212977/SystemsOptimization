@@ -21,7 +21,7 @@ logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class SimulatedAnnealing:
-    def __init__(self, TTtasks, pollingservers, initialTemp=0.001, finalTemp=0.00001, tempReduction="linear", iterationPerTemp=10, alpha=0.0001, beta=5):
+    def __init__(self, TTtasks, pollingservers, initialTemp=0.001, finalTemp=0.00001, tempReduction="linear", iterationPerTemp=100, maxiter=1000, alpha=0.000001, beta=5):
         self.TTtasks = TTtasks
 
         self.solution = pollingservers
@@ -42,6 +42,8 @@ class SimulatedAnnealing:
             "deadline": [],
         }
 
+        self.iter = 0
+        self.MaxIter = maxiter
         self.currTemp = initialTemp
         self.finalTemp = finalTemp
         self.iterationPerTemp = iterationPerTemp
@@ -71,7 +73,7 @@ class SimulatedAnnealing:
 
     def isTerminationCriteriaMet(self):
         # can add more termination criteria
-        return self.currTemp <= self.finalTemp
+        return self.currTemp <= self.finalTemp or self.iter > self.MaxIter
 
     def run(self, pbar=None):
         while not self.isTerminationCriteriaMet():
@@ -92,6 +94,7 @@ class SimulatedAnnealing:
 
                 # if the new solution is better, accept it
                 if newcost - self.currCost < 0 or self.acceptance(newcost - self.currCost):
+                    #print("accepted sol. {}".format(self.isValidNeighbor(newSolution)))
                     self.solution = newSolution
                     self.currCost = newcost
                     self.datalog["accepted_bins"].append(self.datalog["bins"][-1])
@@ -99,6 +102,8 @@ class SimulatedAnnealing:
                 # update progress bar
                 if pbar:
                     pbar()
+
+                self.iter += 1
 
             self.decrementRule()
 
@@ -114,7 +119,8 @@ class SimulatedAnnealing:
         plt.show()
 
     def printSolution(self):
-        print(self.solution[0])
+        for ps in self.solution:
+            print(ps)
 
     def acceptance(self, cost):
         if cost > 0:
@@ -122,7 +128,7 @@ class SimulatedAnnealing:
             return random.random() < math.exp(-cost / self.currTemp)
         return False
 
-    def computeCost(self, solution, params=["wcrt_tt", "wcrt_et", "duration"], weights=[0.4, 0.4, 0.2]):
+    def computeCost(self, solution, params=["wcrt_tt", "wcrt_et", "duration"], weights=[0.5, 0.5, 0]):
         assert sum(weights) == 1.0
 
         wcrt = []
@@ -134,7 +140,7 @@ class SimulatedAnnealing:
             "wcrt_et": np.mean(wcrt),
             "duration": max([ps.duration for ps in solution]),
         }
-        cost = 0
+        cost = 0 if self.isValidNeighbor(solution) else 1
 
         for w, val in zip(weights, params):
             cost += w * params_dict[val] / self.hyperperiod
@@ -143,11 +149,13 @@ class SimulatedAnnealing:
     def neighborOperator(self, center):
         def getrandomneighbor():
             new_center = []
+            #print("divisors", self.period_divisors)
+            #print("ps period", center[0].period)
             for ps in center:
                 new_duration = ps.duration + random.randint(-10, 10) * 10
                 new_period = self.period_divisors[self.period_divisors.index(ps.period) + random.choice([-1, 0, 1])]
-                new_deadline = self.period_divisors[self.period_divisors.index(ps.deadline) + random.choice([-1, 0, 1])]
-                new_center.append(PollingServer(ps.name, new_duration, new_period, new_deadline, ps.tasks))
+                new_deadline = ps.deadline + random.randint(-10, 10) * 10#self.period_divisors[self.period_divisors.index(ps.deadline) + random.choice([-1, 0, 1])]
+                new_center.append(PollingServer(ps.name, new_duration, new_period, new_deadline, ps.tasks, ps.separation))
             return new_center
 
         neighbor = getrandomneighbor()
@@ -159,17 +167,29 @@ class SimulatedAnnealing:
     def isValidNeighbor(self, neighbor) -> bool:
         cond = True
         for ps in neighbor:
-            cond = cond and ps.duration <= ps.period and ps.deadline <= ps.period and EDP(ps)[0]
-        cond = cond and EDF(self.TTtasks + neighbor)[0]
+            #print("ps", ps, cond)
+            cond = cond and ps.duration <= ps.period and ps.deadline <= ps.period# and EDP(ps)[0]
+            #print("after edp ps", ps, cond)
+        #cond = cond and EDF(self.TTtasks + neighbor)[0]
+        #print("after edf schedulable", EDF(self.TTtasks + neighbor)[0])
         return cond
 
 
 if __name__ == "__main__":
-    path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+    path = "./test_cases/taskset_small.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
     #TT, ET = TT, ET[:5]
-    init_ps = [PollingServer("Polling Server", 1200, 1500, 1500, ET)]
+    max_sep = max([task.separation for task in ET])
+    init_ps = []
+    params = [(300, 1000, 1000), (300, 1000, 1000), (300, 1000, 1000)]#[(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
+    for idx, sep in enumerate(range(1, max_sep+1)):
+        tasks = [task for task in ET if task.separation==sep]
+        budget, period, deadline = params[idx]
+        init_ps.append(PollingServer("Polling Server {}".format(sep), budget, period, deadline, tasks, separation=sep))
+
+    for ps in init_ps:
+        print(ps)
 
     sa = SimulatedAnnealing(TT, init_ps)
     #import cProfile
@@ -178,10 +198,12 @@ if __name__ == "__main__":
         sa.run(bar)
     #pr.print_stats()
 
-    schedulable_TT, timetable, wcrt_TT = EDF(TT + sa.solution)
-    schedulable_ET, wcrt_ET = EDP(sa.solution[0])
 
-    print(wcrt_TT, wcrt_ET)
+    schedulable_TT, timetable, wcrt_TT = EDF(TT + sa.solution)
+    print(wcrt_TT)
+    for ps in sa.solution:
+        schedulable_ET, wcrt_ET = EDP(ps)
+        print(wcrt_ET)
 
     sa.printSolution()
     sa.plotSolution()
