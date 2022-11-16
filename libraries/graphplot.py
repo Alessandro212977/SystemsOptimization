@@ -17,7 +17,7 @@ def plotTTtask(TT, sigma, xmax=None):
     if not xmax:
         xmax = lcm(*[obj.period for obj in TT])
     ax.set_xlim(0-0.01*xmax, xmax+0.01*xmax)
-    plt.xticks(np.arange(0, xmax+xmax//12, xmax//12))
+    plt.xticks(np.arange(0, xmax+xmax//(xmax/1000), xmax//(xmax/1000)))
     ax.set_xlabel('Duration')
         
     #Y-axis
