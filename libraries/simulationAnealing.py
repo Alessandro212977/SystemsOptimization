@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sympy import divisors
 from math import lcm
+import multiprocess as mp
 
 from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
@@ -15,13 +16,14 @@ from libraries.tasks import PollingServer
 from libraries.graphplot import plotTTtask
 
 from alive_progress import alive_bar
+import enlighten
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class SimulatedAnnealing:
-    def __init__(self, TTtasks, ETtasks, initialTemp=0.001, finalTemp=0.00001, tempReduction="linear", iterationPerTemp=100, maxiter=1000, alpha=0.000001, beta=5):
+    def __init__(self, TTtasks, ETtasks, maxiter=1000, toll=0.01, iterationPerTemp=100, initialTemp=0.1, finalTemp=0.0001, tempReduction="geometric", alpha=0.5, beta=5):
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
 
@@ -29,29 +31,26 @@ class SimulatedAnnealing:
         self.period_divisors = divisors(self.hyperperiod)[1:]
 
         self.solution = self.initializeSolution()
-        if not self.isValidNeighbor(self.solution):
-            print("Warning: starting from invalid solution")
 
         self.currCost = self.computeCost(self.solution)
 
         self.datalog = {
             "bins": [],
             "costs": [],
-            "accepted_bins": [],
-            "duration": [],
-            "period": [],
-            "deadline": [],
+            "accepted_bins": []
         }
 
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
 
-        self.iter = 0
-        self.MaxIter = maxiter
+        self.currIter = 0
+        self.maxIter = maxiter
         self.currTemp = initialTemp
         self.finalTemp = finalTemp
-        self.iterationPerTemp = iterationPerTemp
+        self.currIterationPerTemp = iterationPerTemp
         self.alpha = alpha
         self.beta = beta
+
+        self.toll = toll
 
         self.decrementRule = {"linear": self.linearTempReduction, # t = t - a
                               "geometric": self.geometricTempReduction,  # t = t * a
@@ -68,13 +67,12 @@ class SimulatedAnnealing:
 
     def isTerminationCriteriaMet(self):
         # can add more termination criteria
-        return self.currTemp <= self.finalTemp or self.iter >= self.MaxIter
+        return self.currTemp <= self.finalTemp or self.currIter >= self.maxIter or self.currCost < self.toll
 
     def initializeSolution(self):
         max_sep = max([task.separation for task in self.ETtasks])
-        init_ps = []
-        params = [(300, 1000, 1000)]*max_sep   #[(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
-        for idx, sep in enumerate(range(1, max_sep+1)):
+        init_ps = []#[(300, 1000, 1000)]*max_sep   #[(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
+        for sep in range(1, max_sep+1):
             tasks = [task for task in self.ETtasks if task.separation==sep]
             period = random.choice(self.period_divisors)
             budget = random.randint(1, period)
@@ -84,46 +82,41 @@ class SimulatedAnnealing:
 
     def run(self, pbar=None):
         while not self.isTerminationCriteriaMet():
-            logging.debug("Temperature: {}".format(self.currTemp))
-            for i in range(self.iterationPerTemp):
+            #print("Temperature: {}, prob: {}".format(self.currTemp,  math.exp(-0.1 / self.currTemp)))
+            for i in range(self.currIterationPerTemp):
                 # pick a random neighbor
                 newSolution = self.neighborOperator(self.solution)
 
                 # get the cost between the two solutions
                 newcost = self.computeCost(newSolution)
 
-                logging.debug("Iter: {}, cost: {:.3f}, new duration: {}, new period: {}, new deadline: {}".format(len(self.datalog["bins"]), newcost, newSolution[0].duration, newSolution[0].period, newSolution[0].deadline))
-                self.datalog["bins"].append(self.datalog["bins"][-1] + 1 if self.datalog["bins"] else 0)
+                self.datalog["bins"].append(self.currIter)
                 self.datalog["costs"].append(newcost)
-                self.datalog["duration"].append(newSolution[0].duration)
-                self.datalog["period"].append(newSolution[0].period)
-                self.datalog["deadline"].append(newSolution[0].deadline)
 
                 # if the new solution is better, accept it
                 if newcost - self.currCost < 0 or self.acceptance(newcost - self.currCost):
                     #print("accepted sol. {}".format(self.isValidNeighbor(newSolution)))
                     self.solution = newSolution
                     self.currCost = newcost
-                    self.datalog["accepted_bins"].append(self.datalog["bins"][-1])
+                    self.datalog["accepted_bins"].append(self.currIter)
 
                 # update progress bar
                 if pbar:
                     pbar()
 
                 #update iteration counter
-                self.iter += 1
+                self.currIter += 1
 
             self.decrementRule()
 
-    def plotSolution(self, feature_list=["costs", "duration", "period", "deadline"]):
-        for feature in feature_list:
-            fig, ax = plt.subplots()
-            ax.plot(self.datalog["bins"], self.datalog[feature])
-            ax.scatter(self.datalog["accepted_bins"], [self.datalog[feature][i] for i in self.datalog["accepted_bins"]], color="red", marker="x")
-            ax.grid()
-            ax.set_xlabel("Iterations")
-            ax.set_ylabel(feature)
-            ax.set_title(feature)
+    def plotCost(self):
+        fig, ax = plt.subplots()
+        #ax.plot(self.datalog["bins"], self.datalog["cost"])
+        ax.plot(self.datalog["accepted_bins"], [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]])#, color="red", marker="x")
+        ax.grid()
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Cost")
+        ax.set_title("Cost of accepted solutions")
         plt.show()
 
     def printSolution(self):
@@ -191,21 +184,56 @@ class SimulatedAnnealing:
         cond = cond and EDF(self.TTtasks + neighbor)[0]
         return cond
 
+class MultiSimulatedAnealing:
+    def __init__(self, sa_args, numworkers=None) -> None:
+        self.numWorkers = numworkers
+        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=100) for __ in range(self.numWorkers)]
+        self.maxIter = self.sa_instances[0].maxIter
+
+    def run(self):
+        print("----------- Parallel Anealing Solution ------------")
+        import cpuinfo
+        cpu = cpuinfo.get_cpu_info()
+        print('{}, {} cores'.format(cpu['brand_raw'], cpu['count']))
+
+        def func(args):
+            with alive_bar(self.sa_instances[args].maxIter, theme="smooth", title="Process {}".format(args)) as bar:  # progress bar
+                self.sa_instances[args].run(bar)
+
+        with mp.Pool(mp.cpu_count()) as pool:
+            for __ in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
+                pass
+
+        costs = [obj.currCost for obj in self.sa_instances]
+        print("---------------------------------------------------")
+        return self.sa_instances[np.argmin(costs)]
+
+        
 
 if __name__ == "__main__":
-    path = "./test_cases/taskset_small.csv"
+    path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"#"./test_cases/taskset_small.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
-    
+
+    """
+    msa = MultiSimulatedAnealing((TT, ET), 4)
+    msa.run().printSolution()
+    quit()
+    """
+
     sa = SimulatedAnnealing(TT, ET)
     sa.printSolution()
 
-    import cProfile, pstats
-    with cProfile.Profile() as pr:
-        with alive_bar(sa.iterationPerTemp * 10, theme="smooth") as bar:  # progress bar
+    if False:
+        import cProfile, pstats
+        with cProfile.Profile() as pr:
+            with alive_bar(sa.maxIter, theme="smooth") as bar:  # progress bar
+                sa.run(bar)
+        pr = pstats.Stats(pr)
+        pr.sort_stats('cumulative').print_stats(10)
+    else:
+        with alive_bar(sa.maxIter, theme="smooth", title="Iterations:") as bar:  # progress bar
             sa.run(bar)
-    pr = pstats.Stats(pr)
-    pr.sort_stats('cumulative').print_stats(10)
 
     schedulable_TT, timetable, wcrt_TT = EDF(TT + sa.solution)
     print(wcrt_TT)
@@ -214,6 +242,6 @@ if __name__ == "__main__":
         print(wcrt_ET)
 
     sa.printSolution()
-    sa.plotSolution()
+    sa.plotCost()
 
-    plotTTtask(TT + sa.solution, timetable)
+    plotTTtask(TT + sa.solution, timetable, group_tt=True)

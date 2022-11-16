@@ -7,7 +7,7 @@ class Event:
         self.deadline = deadline
 
     def __repr__(self):
-       return "{}: dur: {},\t prd: {},\t dln: {}".format(self.name, self.duration, self.period, self.deadline)
+       return "{}: dur: {}, prd: {}, dln: {}".format(self.name, self.duration, self.period, self.deadline)
        
 class TT(Event):
     def __init__(self, name, duration, period, deadline) -> None:
@@ -21,7 +21,7 @@ class ET(Event):
         self.separation = separation
 
     def __repr__(self):
-        return super().__repr__() + ",\t prt: {}".format(self.priority) + ",\t sep: {}\t".format(self.separation)
+        return super().__repr__() + ", prt: {}".format(self.priority) + ", sep: {}".format(self.separation)
 
 class PollingServer(Event):
     def __init__(self, name, duration, period, deadline, tasks, separation) -> None:
@@ -30,4 +30,4 @@ class PollingServer(Event):
         self.separation = separation
 
     def __repr__(self):
-        return super().__repr__() + ",\t sep: {}".format(self.separation) + ",\t num of tasks: {}\t".format(len(self.tasks))
+        return super().__repr__() + ", sep: {}".format(self.separation) + ", num of tasks: {}".format(len(self.tasks))

@@ -8,6 +8,7 @@ class DataLoader:
 
     def loadFile(self):
         data = pd.read_csv(self.path, sep=";")
+        data.rename(columns = {'seperation':'separation'}, inplace = True)
         TTtasks = []
         ETtasks = []
         for __, row in data.iterrows():
