@@ -16,7 +16,7 @@ from libraries.tasks import PollingServer
 from libraries.graphplot import plotTTtask
 
 from alive_progress import alive_bar
-import enlighten
+from tqdm import tqdm 
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)  # DEBUG
@@ -187,7 +187,7 @@ class SimulatedAnnealing:
 class MultiSimulatedAnealing:
     def __init__(self, sa_args, numworkers=None) -> None:
         self.numWorkers = numworkers
-        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=100) for __ in range(self.numWorkers)]
+        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=1000) for __ in range(self.numWorkers)]
         self.maxIter = self.sa_instances[0].maxIter
 
     def run(self):
@@ -197,8 +197,9 @@ class MultiSimulatedAnealing:
         print('{}, {} cores'.format(cpu['brand_raw'], cpu['count']))
 
         def func(args):
-            with alive_bar(self.sa_instances[args].maxIter, theme="smooth", title="Process {}".format(args)) as bar:  # progress bar
-                self.sa_instances[args].run(bar)
+            #with alive_bar(self.sa_instances[args].maxIter, theme="smooth", title="Process {}".format(args)) as bar:  # progress bar
+            with tqdm(total=self.sa_instances[args].maxIter, position=args, desc="Process: {}".format(args), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}', leave=False) as bar:
+                self.sa_instances[args].run(bar.update)
 
         with mp.Pool(mp.cpu_count()) as pool:
             for __ in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
@@ -206,7 +207,8 @@ class MultiSimulatedAnealing:
 
         costs = [obj.currCost for obj in self.sa_instances]
         print("---------------------------------------------------")
-        return self.sa_instances[np.argmin(costs)]
+        self.solution = self.sa_instances[np.argmin(costs)]
+        return self.solution
 
         
 
@@ -215,12 +217,8 @@ if __name__ == "__main__":
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
 
-    """
-    msa = MultiSimulatedAnealing((TT, ET), 4)
-    msa.run().printSolution()
-    quit()
-    """
 
+    """
     sa = SimulatedAnnealing(TT, ET)
     sa.printSolution()
 
@@ -234,6 +232,11 @@ if __name__ == "__main__":
     else:
         with alive_bar(sa.maxIter, theme="smooth", title="Iterations:") as bar:  # progress bar
             sa.run(bar)
+    """
+
+    msa = MultiSimulatedAnealing((TT, ET), 4)
+    sa = msa.run()
+    sa.printSolution()
 
     schedulable_TT, timetable, wcrt_TT = EDF(TT + sa.solution)
     print(wcrt_TT)
