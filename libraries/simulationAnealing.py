@@ -69,6 +69,24 @@ class SimulatedAnnealing:
         # can add more termination criteria
         return self.currTemp <= self.finalTemp or self.currIter >= self.maxIter or self.currCost < self.toll
 
+    def plotTemperature(self):
+        iterations = list(range(int(self.maxIter/self.currIterationPerTemp)+1))
+        temperatures = [self.currTemp*self.alpha**i for i in iterations]
+        differences = [0.001, 0.01, 0.1, 1.0]
+        for d in differences:
+            metropolis = [np.exp(-d/t) for t in temperatures]
+            # plot iterations vs metropolis
+            label = 'diff=%.3f' % d
+            plt.plot(iterations, metropolis, marker='x', label=label)
+        # inalize plot
+        plt.xlabel('Iteration')
+        plt.ylabel('Metropolis Criterion')
+        #plt.ylim((0.0001, 1))
+        #plt.yscale("log")
+        plt.grid()
+        plt.legend()
+        plt.show()
+
     def initializeSolution(self):
         max_sep = max([task.separation for task in self.ETtasks])
         init_ps = []#[(300, 1000, 1000)]*max_sep   #[(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
@@ -113,6 +131,7 @@ class SimulatedAnnealing:
         fig, ax = plt.subplots()
         #ax.plot(self.datalog["bins"], self.datalog["cost"])
         ax.plot(self.datalog["accepted_bins"], [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]])#, color="red", marker="x")
+        ax.set_ylim((0, 3))
         ax.grid()
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Cost")
@@ -137,38 +156,39 @@ class SimulatedAnnealing:
             return random.random() < math.exp(-cost / self.currTemp)
         return False
 
-    def computeCost(self, solution, params=["wcrt_tt", "wcrt_et"], weights=[0.5, 0.5]):
+    def computeCost(self, solution, weights=[0.5, 0.5]):
         assert sum(weights) == 1.0
 
-        wcrt = []
+        #EDP
+        et_schedulable, et_wcrt, et_penalty = True, [], 0
         for ps in solution:
-            wcrt = wcrt + EDP(ps)[1]
+            schedulable, WCRT, penalty = EDP(ps)
+            et_schedulable = et_schedulable and schedulable
+            et_wcrt = et_wcrt + WCRT
+            et_penalty += penalty
+        et_penalty /= len(solution)
 
-        params_dict = {
-            "wcrt_tt": np.mean(EDF(self.TTtasks + solution)[2]),
-            "wcrt_et": np.mean(wcrt),
-            "duration": max([ps.duration for ps in solution]),
-        }
-        cost = 0 if self.isValidNeighbor(solution) else 1
+        #EDF
+        tt_schedulable, __, tt_wcrt, tt_penalty = EDF(self.TTtasks + solution)
 
-        for w, val in zip(weights, params):
-            cost += w * params_dict[val] / self.hyperperiod
+        cost = 0 if et_schedulable and tt_schedulable else 1 + 0.5 * et_penalty + 0.5 * tt_penalty
+        for w, c in zip(weights, [np.mean(et_wcrt), np.mean(tt_wcrt)]):
+            cost += w * c / self.hyperperiod
         return cost
 
     def neighborOperator(self, center):
         def getrandomneighbor():
             new_center = []
             for ps in center:
-                new_duration = self.clamp(ps.duration + random.randint(-10, 10) * 10, 1, self.hyperperiod)
                 new_period = self.period_divisors[self.clamp(self.period_divisors.index(ps.period) + random.choice([-1, 0, 1]), 0, len(self.period_divisors)-1)]
-                new_deadline = self.clamp(ps.deadline + random.randint(-10, 10) * 10, 1, self.hyperperiod)#self.period_divisors[self.period_divisors.index(ps.deadline) + random.choice([-1, 0, 1])]
+                new_duration = self.clamp(ps.duration + random.randint(-10, 10) * 10, 1, new_period)
+                new_deadline = self.clamp(ps.deadline + random.randint(-10, 10) * 10, new_duration, new_period)
                 new_center.append(PollingServer(ps.name, new_duration, new_period, new_deadline, ps.tasks, ps.separation))
             return new_center
 
         neighbor = getrandomneighbor()
-        while not self.isSatisfyingConstraints(neighbor):
-            neighbor = getrandomneighbor()
-
+        #while not self.isSatisfyingConstraints(neighbor):
+        #    neighbor = getrandomneighbor()
         return neighbor
 
     def isSatisfyingConstraints(self, neighbor) -> bool:
@@ -218,8 +238,9 @@ if __name__ == "__main__":
     TT, ET = dl.loadFile()
 
 
-    """
-    sa = SimulatedAnnealing(TT, ET)
+    #"""
+    sa = SimulatedAnnealing(TT, ET, maxiter=1000)
+    #sa.plotTemperature()
     sa.printSolution()
 
     if False:
@@ -238,10 +259,12 @@ if __name__ == "__main__":
     sa = msa.run()
     sa.printSolution()
 
-    schedulable_TT, timetable, wcrt_TT = EDF(TT + sa.solution)
+    """
+
+    schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + sa.solution)
     print(wcrt_TT)
     for ps in sa.solution:
-        schedulable_ET, wcrt_ET = EDP(ps)
+        schedulable_ET, wcrt_ET, __ = EDP(ps)
         print(wcrt_ET)
 
     sa.printSolution()

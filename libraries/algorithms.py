@@ -13,10 +13,13 @@ def EDF(tasks):
     durations = [obj.duration for obj in tasks] #durations
     deadlines = [obj.deadline for obj in tasks] #deadlines
 
+    penalty = [0] * len(tasks)
+
     while t < T:
         for i, task in enumerate(tasks):
             if durations[i] > 0 and deadlines[i] <= t:
-                wcrt[i] = T-releases[i]
+                wcrt[i] = max(wcrt[i], T-releases[i])
+                penalty[i] = max(penalty[i], T-releases[i])
                 schedulable = False
             if t % task.period == 0:
                 releases[i] = t
@@ -35,10 +38,11 @@ def EDF(tasks):
 
     if any(v > 0 for v in durations):
         for idx in [i for i, response in enumerate(wcrt) if response == -1]:
-            wcrt[idx] = T-releases[idx]
+            wcrt[idx] = max(wcrt[idx], T-releases[idx])
+            penalty[idx] = max(penalty[idx], T-releases[idx])
             schedulable = False
         
-    return schedulable, timetable, wcrt
+    return schedulable, timetable, wcrt, sum(penalty)/(T*len(tasks))
 
 
 def EDP(ps: PollingServer):
@@ -48,6 +52,8 @@ def EDP(ps: PollingServer):
     T = lcm(*[obj.period for obj in ps.tasks])
     WCRT = [T]*len(ps.tasks)
     schedulable = True
+
+    penalty = 0
 
     for i, ETtask1 in enumerate(ps.tasks):
         t = 0
@@ -64,8 +70,10 @@ def EDP(ps: PollingServer):
             t += 1
 
         if WCRT[i] > ETtask1.deadline:
+            penalty += WCRT[i] - ETtask1.deadline
             schedulable = False
-    return schedulable, WCRT
+
+    return schedulable, WCRT, penalty/T
 
 if __name__ == "__main__":
     path = "./test_cases/taskset_small.csv"
@@ -78,6 +86,6 @@ if __name__ == "__main__":
         budget, period, deadline = params[idx]
         init_ps.append(PollingServer("Polling Server", budget, period, deadline, tasks, separation=sep))
 
-    print([EDP(ps) for ps in init_ps])
-    schedulable, timetable, wcrt = EDF(TT + init_ps)
-    print(schedulable, wcrt)
+    print("EDP", [EDP(ps) for ps in init_ps])
+    schedulable, timetable, wcrt, penalty = EDF(TT + init_ps)
+    print("EDF", schedulable, wcrt, penalty)
