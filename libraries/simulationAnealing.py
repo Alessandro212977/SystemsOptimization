@@ -141,7 +141,7 @@ class SimulatedAnnealing:
     def printSolution(self):
         wcrt_tt = EDF(self.TTtasks + self.solution)[2]
         wcrt_et = []
-        print("----------- Simulated Anealing Solution -----------")
+        print("----------- Simulated Annealing Solution -----------")
         for ps in self.solution:
             print(ps)
             wcrt_et = wcrt_et + EDP(ps)[1]
@@ -204,36 +204,43 @@ class SimulatedAnnealing:
         cond = cond and EDF(self.TTtasks + neighbor)[0]
         return cond
 
-class MultiSimulatedAnealing:
+class MultiSimulatedAnnealing:
     def __init__(self, sa_args, numworkers=None) -> None:
         self.numWorkers = numworkers
-        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=1000) for __ in range(self.numWorkers)]
+        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=50) for __ in range(self.numWorkers)]
         self.maxIter = self.sa_instances[0].maxIter
 
     def run(self):
-        print("----------- Parallel Anealing Solution ------------")
+        print("----------- Parallel Annealing Solution ------------")
         import cpuinfo
         cpu = cpuinfo.get_cpu_info()
         print('{}, {} cores'.format(cpu['brand_raw'], cpu['count']))
+        costs = [obj.currCost for obj in self.sa_instances]
+        print("before", costs)
+        print()
 
         def func(args):
-            #with alive_bar(self.sa_instances[args].maxIter, theme="smooth", title="Process {}".format(args)) as bar:  # progress bar
-            with tqdm(total=self.sa_instances[args].maxIter, position=args, desc="Process: {}".format(args), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}', leave=False) as bar:
+            with tqdm(total=self.sa_instances[args].maxIter, position=args, desc="Process: {}".format(args), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}', leave=True) as bar:
                 self.sa_instances[args].run(bar.update)
+            return self.sa_instances[args]
 
+        sa = []
         with mp.Pool(mp.cpu_count()) as pool:
-            for __ in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
-                pass
+            for sol in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
+                sa.append(sol)
 
-        costs = [obj.currCost for obj in self.sa_instances]
+        costs = [obj.currCost for obj in sa]
+        print()
+        print("after", costs)
         print("---------------------------------------------------")
-        self.solution = self.sa_instances[np.argmin(costs)]
+        self.solution = sa[np.argmin(costs)]
         return self.solution
 
         
 
 if __name__ == "__main__":
-    path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"#"./test_cases/taskset_small.csv"
+    path = "./test_cases/taskset_small.csv"
+    #path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
 
@@ -255,10 +262,8 @@ if __name__ == "__main__":
             sa.run(bar)
     """
 
-    msa = MultiSimulatedAnealing((TT, ET), 4)
+    msa = MultiSimulatedAnnealing((TT, ET), 8)
     sa = msa.run()
-    sa.printSolution()
-
     """
 
     schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + sa.solution)
