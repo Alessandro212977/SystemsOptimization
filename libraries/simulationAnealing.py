@@ -69,7 +69,7 @@ class SimulatedAnnealing:
                 response_norm = preprocessing.normalize([np.array([responsetime, responsetimeNew])])[0]
                 cost = 0.6*(wcrt_norm[0] - wcrt_norm[1]) +0.4*(response_norm[0] - response_norm[1])
                 # if the new solution is better, accept it
-                if -cost > 0:
+                if cost > 0:
                     self.solution = newSolution
                     print("this solution is better than the old one")
                 # if the new solution is not better, accept it with a probability of e^(-cost/temp)
