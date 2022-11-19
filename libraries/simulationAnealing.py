@@ -14,8 +14,6 @@ from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
 from libraries.tasks import PollingServer
 from libraries.graphplot import plotTTtask
-
-from alive_progress import alive_bar
 from tqdm import tqdm 
 
 logging.basicConfig()
@@ -253,13 +251,13 @@ if __name__ == "__main__":
     if False:
         import cProfile, pstats
         with cProfile.Profile() as pr:
-            with alive_bar(sa.maxIter, theme="smooth") as bar:  # progress bar
-                sa.run(bar)
+            with tqdm(total=sa.maxIter, desc="Iterations") as bar:  # progress bar
+                sa.run(bar.update)
         pr = pstats.Stats(pr)
         pr.sort_stats('cumulative').print_stats(10)
     else:
-        with alive_bar(sa.maxIter, theme="smooth", title="Iterations:") as bar:  # progress bar
-            sa.run(bar)
+        with tqdm(total=sa.maxIter, desc="Iterations") as bar:
+            sa.run(bar.update)
     """
 
     msa = MultiSimulatedAnnealing((TT, ET), 8)

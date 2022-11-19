@@ -100,7 +100,7 @@ if __name__ == "__main__":
     dl = DataLoader(path)
     TT, ET  = dl.loadFile()
     ps = PollingServer("ps", duration=1000, period=2000, deadline=1000, tasks=ET, separation=0)
-    schedulable, sigma, WCRT = EDF(TT+[ps])
+    schedulable, sigma, WCRT , __= EDF(TT+[ps])
     #print(sigma, WCRT)
     plotTTtask(TT+[ps], sigma, group_tt=False)
     #plotSimulatedAnealing()
