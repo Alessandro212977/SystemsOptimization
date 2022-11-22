@@ -64,6 +64,10 @@ def GA(TT, ET):
 
 
 def main():
+    import cpuinfo
+    cpu = cpuinfo.get_cpu_info()
+    print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
+    
     path = "./test_cases/taskset_small.csv"
     # path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     dl = dataloader.DataLoader(path)
