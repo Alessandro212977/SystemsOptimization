@@ -2,13 +2,10 @@ from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
 from libraries.tasks import PollingServer
 import random
-import math
 import numpy as np
-import copy as cp
 from sympy import divisors
 from math import lcm
 import itertools
-from sklearn import preprocessing
 
 class geneticAlgorithm:
 
