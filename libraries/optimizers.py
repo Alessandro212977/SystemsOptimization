@@ -11,7 +11,7 @@ import multiprocess as mp
 from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
 from libraries.tasks import PollingServer
-from libraries.graphplot import plotTTtask
+from libraries.graphplot import getTimetablePlot
 from tqdm import tqdm 
 
 logging.basicConfig()
@@ -38,6 +38,24 @@ class Optimizer:
         self.solution = self.initializeSolution()
         self.currCost = self.computeCost(self.solution)
         self.currIter = 0
+
+        #Datalog
+        self.datalog = {
+            "bins": [],
+            "costs": [],
+            "accepted_bins": []
+        }
+
+    def plotCost(self):
+        fig, ax = plt.subplots()
+        #ax.plot(self.datalog["bins"], self.datalog["cost"])
+        ax.plot(self.datalog["accepted_bins"], [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]])#, color="red", marker="x")
+        ax.set_ylim((0, 3))
+        ax.grid()
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Cost")
+        ax.set_title("Cost of accepted solutions")
+        plt.show()
 
     def initializeSolution(self):
         max_sep = max([task.separation for task in self.ETtasks])
@@ -107,12 +125,6 @@ class SimulatedAnnealing(Optimizer):
     def __init__(self, TTtasks, ETtasks, maxiter=1000, toll=0.01, iterationPerTemp=100, initialTemp=0.1, finalTemp=0.0001, tempReduction="geometric", alpha=0.5, beta=5):
         super().__init__(TTtasks, ETtasks, maxiter, toll)
 
-        self.datalog = {
-            "bins": [],
-            "costs": [],
-            "accepted_bins": []
-        }
-
         self.currTemp = initialTemp
         self.finalTemp = finalTemp
         self.currIterationPerTemp = iterationPerTemp
@@ -150,17 +162,6 @@ class SimulatedAnnealing(Optimizer):
         plt.legend()
         plt.show()
 
-    def plotCost(self):
-        fig, ax = plt.subplots()
-        #ax.plot(self.datalog["bins"], self.datalog["cost"])
-        ax.plot(self.datalog["accepted_bins"], [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]])#, color="red", marker="x")
-        ax.set_ylim((0, 3))
-        ax.grid()
-        ax.set_xlabel("Iterations")
-        ax.set_ylabel("Cost")
-        ax.set_title("Cost of accepted solutions")
-        plt.show()
-
     def acceptance(self, cost):
         if cost > 0:
             # print("the solution could be accepted with prob: {:.3f}".format(math.exp(-cost/self.currTemp)))
@@ -185,7 +186,7 @@ class SimulatedAnnealing(Optimizer):
     def run(self, pbar=None):
         while not self.isTerminationCriteriaMet():
             #print("Temperature: {}, prob: {}".format(self.currTemp,  math.exp(-0.1 / self.currTemp)))
-            for i in range(self.currIterationPerTemp):
+            for __ in range(self.currIterationPerTemp):
                 # pick a random neighbor
                 newSolution = self.neighborOperator(self.solution)
 
@@ -210,6 +211,38 @@ class SimulatedAnnealing(Optimizer):
                 self.currIter += 1
 
             self.decrementRule()
+
+class MultiSimulatedAnnealing:
+    def __init__(self, sa_args, numworkers=None) -> None:
+        self.numWorkers = numworkers
+        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=50) for __ in range(self.numWorkers)]
+        self.maxIter = self.sa_instances[0].maxIter
+
+    def run(self):
+        print("----------- Parallel Annealing Solution ------------")
+        import cpuinfo
+        cpu = cpuinfo.get_cpu_info()
+        print('{}, {} cores'.format(cpu['brand_raw'], cpu['count']))
+        costs = [obj.currCost for obj in self.sa_instances]
+        print("before", costs)
+        print()
+
+        def func(args):
+            with tqdm(total=self.sa_instances[args].maxIter, position=args, desc="Process: {}".format(args), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}', leave=True) as bar:
+                self.sa_instances[args].run(bar.update)
+            return self.sa_instances[args]
+
+        sa = []
+        with mp.Pool(mp.cpu_count()) as pool:
+            for sol in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
+                sa.append(sol)
+
+        costs = [obj.currCost for obj in sa]
+        print()
+        print("after", costs)
+        print("---------------------------------------------------")
+        self.solution = sa[np.argmin(costs)]
+        return self.solution
 
 class GeneticAlgorithm(Optimizer):
     def __init__(self, TTtasks, ETtasks, maxiter=100, toll=0.01, pop_size=10, p_cross=0.8, p_mut=0.2):
@@ -245,10 +278,8 @@ class GeneticAlgorithm(Optimizer):
             solution.append(PollingServer(solution_old[i//3].name, params[i], params[i+1], params[i+2], solution_old[i//3].tasks, solution_old[i//3].separation))
         return solution
 
-    # crossover two parents to create two children
     def crossover(self, p1, p2):
-        # children are copies of parents by default
-        # check for recombination
+        # crossover two parents to create two children
         if np.random.rand() > self.pCross:
             return p1, p2
 
@@ -288,43 +319,50 @@ class GeneticAlgorithm(Optimizer):
         ind = np.argpartition(-np.array(scores), -10)[-10:]
         return [pop[idx] for idx in ind] 
 
-    def run(self):
-        pop = self.initialPopulation()
-        # keep track of best solution
-        # enumerate generations
+    def nextGeneration(self, pop, scores):
+        parent_list = self.selection(pop, scores)#[self.selection(pop, scores) for _ in range(self.n_pop)]
+        # create the next generation
+        children = []
+        parent_list = list(itertools.permutations(parent_list, 2))
+        random.shuffle(parent_list)
+
+        for p1, p2 in parent_list[:50]:
+            # crossover and mutation
+            for c in self.crossover(p1, p2):
+                # mutation
+                self.mutation(c)
+                # store for next generation
+                children.append(c)
+        # replace population
+        return children
+
+    def run(self, pbar=None):
         while not self.isTerminationCriteriaMet():
+            pop = self.nextGeneration(pop, scores) if self.currIter > 0 else self.initialPopulation()
+
             # evaluate all candidates in the population
             scores =  self.evaluatePopulation(pop)
             # check for new best solution
             newSolution = pop[np.argmin(scores)]
             newCost = np.min(scores)
 
+            self.datalog["bins"].append(self.currIter)
+            self.datalog["costs"].append(newCost)
+
             if newCost - self.currCost < 0:
                     #print("accepted sol. {}".format(self.isValidNeighbor(newSolution)))
                     self.solution = newSolution
                     self.currCost = newCost
+                    self.datalog["accepted_bins"].append(self.currIter)
 
-            print(">%d, new best f(%s) = %.3f" % (self.currIter, newSolution, newCost))
-            # select parents
-            parent_list = self.selection(pop, scores)#[self.selection(pop, scores) for _ in range(self.n_pop)]
-            # create the next generation
-            children = list()
-            parent_list = list(itertools.permutations(parent_list, 2))
-            random.shuffle(parent_list)
+            # update progress bar
+            if pbar:
+                pbar()
 
-            for p1, p2 in parent_list[:50]:
-
-                # get selected parents in pairs
-                # crossover and mutation
-                for c in self.crossover(p1, p2):
-                    # mutation
-                    self.mutation(c)
-                    # store for next generation
-                    children.append(c)
-            # replace population
-            pop = children
-
+            #update iteration counter
             self.currIter += 1
+
+            
 
 
 if __name__ == "__main__":
@@ -333,12 +371,11 @@ if __name__ == "__main__":
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
 
-    """
     optim = Optimizer(TT, ET, 10)
     optim.run()
     optim.printSolution()
 
-    sa = SimulatedAnnealing(TT, ET, maxiter=1000)
+    sa = SimulatedAnnealing(TT, ET, maxiter=100)
     #sa.plotTemperature()
     sa.printSolution()
 
@@ -362,8 +399,8 @@ if __name__ == "__main__":
     sa.printSolution()
     sa.plotCost()
 
-    plotTTtask(TT + sa.solution, timetable, group_tt=True)
-    """
+    getTimetablePlot(TT + sa.solution, timetable, group_tt=True).show()
+
 
     ga = GeneticAlgorithm(TT, ET, 10)
     ga.run()

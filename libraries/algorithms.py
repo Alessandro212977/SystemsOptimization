@@ -1,7 +1,6 @@
 from libraries.tasks import PollingServer
 import libraries.dataloader as dataloader
 from math import lcm, ceil
-import numpy as np
 
 def EDF(tasks):
     schedulable = True

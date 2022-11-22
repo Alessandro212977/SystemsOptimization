@@ -6,7 +6,7 @@ from collections import defaultdict
 from libraries.algorithms import *
 from numpy import arange
     
-def plotTTtask(TT, sigma, xmax=None, group_tt=False):
+def getTimetablePlot(TT, sigma, xmax=None, group_tt=False):
     plt.rcParams["figure.figsize"] = [16, 7]
     plt.rcParams["figure.autolayout"] = True
     
@@ -58,8 +58,8 @@ def plotTTtask(TT, sigma, xmax=None, group_tt=False):
                 
     ax.set_title("Task Scheduling")
     ax.grid(True)
-    plt.savefig("sheduling.png")
-    plt.show()
+
+    return plt
      
 def plotSimulatedAnealing():
     
@@ -90,7 +90,7 @@ def run(name):
     if name == "TT":
         TT, ET  = dl.loadFile()
         sigma, WCRT = EDF(TT)
-        plotTTtask(TT, sigma)
+        getTimetablePlot(TT, sigma)
     else:
         plotSimulatedAnealing()
         
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     ps = PollingServer("ps", duration=1000, period=2000, deadline=1000, tasks=ET, separation=0)
     schedulable, sigma, WCRT , __= EDF(TT+[ps])
     #print(sigma, WCRT)
-    plotTTtask(TT+[ps], sigma, group_tt=False)
+    getTimetablePlot(TT+[ps], sigma, group_tt=False)
     #plotSimulatedAnealing()
     
         
