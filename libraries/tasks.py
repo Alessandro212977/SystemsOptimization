@@ -1,4 +1,3 @@
-from math import gcd, lcm 
 
 class Event:
     def __init__(self, name, duration, period, deadline) -> None:
@@ -8,7 +7,7 @@ class Event:
         self.deadline = deadline
 
     def __repr__(self):
-       pass
+       return "{}: dur: {}, prd: {}, dln: {}".format(self.name, self.duration, self.period, self.deadline)
        
 class TT(Event):
     def __init__(self, name, duration, period, deadline) -> None:
@@ -16,6 +15,19 @@ class TT(Event):
     
 
 class ET(Event):
-    def __init__(self, name, duration, period, deadline, priority) -> None:
+    def __init__(self, name, duration, period, deadline, priority, separation) -> None:
         super().__init__(name, duration, period, deadline)
         self.priority = priority
+        self.separation = separation
+
+    def __repr__(self):
+        return super().__repr__() + ", prt: {}".format(self.priority) + ", sep: {}".format(self.separation)
+
+class PollingServer(Event):
+    def __init__(self, name, duration, period, deadline, tasks, separation) -> None:
+        super().__init__(name, duration, period, deadline)
+        self.tasks = tasks
+        self.separation = separation
+
+    def __repr__(self):
+        return super().__repr__() + ", sep: {}".format(self.separation) + ", num of tasks: {}".format(len(self.tasks))
