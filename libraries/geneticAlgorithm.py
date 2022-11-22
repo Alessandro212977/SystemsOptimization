@@ -12,7 +12,7 @@ from sklearn import preprocessing
 
 class geneticAlgorithm:
 
-    def __init__(self, n_pop, n_iter, TTtasks, ETtasks, r_cross=0.2, r_mut=0.2):
+    def __init__(self, n_pop, n_iter, TTtasks, ETtasks, r_cross=0.8, r_mut=0.8):
         self.n_pop = n_pop
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
@@ -136,9 +136,11 @@ class geneticAlgorithm:
             parent_list = self.selection(pop, scores)#[self.selection(pop, scores) for _ in range(self.n_pop)]
             # create the next generation
             children = list()
-            for p1, p2 in itertools.permutations(parent_list, 2):
-                if len(children) >= 50:
-                    break
+            parent_list = list(itertools.permutations(parent_list, 2))
+            random.shuffle(parent_list)
+
+            for p1, p2 in parent_list[:50]:
+
                 # get selected parents in pairs
                 # crossover and mutation
                 for c in self.crossover(p1, p2):
