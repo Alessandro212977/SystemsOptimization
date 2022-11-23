@@ -47,7 +47,8 @@ class Optimizer:
         fig, ax = plt.subplots()
         # ax.plot(self.datalog["bins"], self.datalog["cost"])
         ax.plot(
-            self.datalog["accepted_bins"], [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]]
+            self.datalog["accepted_bins"],
+            [self.datalog["costs"][i] for i in self.datalog["accepted_bins"]],
         )  # , color="red", marker="x")
         ax.set_ylim((0, 3))
         ax.grid()
@@ -148,9 +149,7 @@ class SimulatedAnnealing(Optimizer):
             "linear": self.linearTempReduction,  # t = t - a
             "geometric": self.geometricTempReduction,  # t = t * a
             "slowDecrease": self.slowDecreaseTempReduction,  # t = t / 1 + Bt
-        }[
-            tempReduction
-        ]  
+        }[tempReduction]
 
     def linearTempReduction(self):
         self.currTemp -= self.alpha
@@ -199,7 +198,14 @@ class SimulatedAnnealing(Optimizer):
                 new_duration = self.clamp(ps.duration + random.randint(-10, 10) * 10, 1, new_period)
                 new_deadline = self.clamp(ps.deadline + random.randint(-10, 10) * 10, new_duration, new_period)
                 new_center.append(
-                    PollingServer(ps.name, new_duration, new_period, new_deadline, ps.tasks, ps.separation)
+                    PollingServer(
+                        ps.name,
+                        new_duration,
+                        new_period,
+                        new_deadline,
+                        ps.tasks,
+                        ps.separation,
+                    )
                 )
             return new_center
 
@@ -239,47 +245,84 @@ class SimulatedAnnealing(Optimizer):
 
 
 class MultiSimulatedAnnealing:
-    def __init__(self, sa_args, numworkers=None) -> None:
+    def __init__(
+        self,
+        numinstances,
+        numworkers,
+        TTtasks,
+        ETtasks,
+        maxiter=1000,
+        toll=0.01,
+        iterationPerTemp=100,
+        initialTemp=0.1,
+        finalTemp=0.0001,
+        tempReduction="geometric",
+        alpha=0.5,
+        beta=5,
+    ) -> None:
+
+        self.numInstances = numinstances
         self.numWorkers = numworkers
-        self.sa_instances = [SimulatedAnnealing(*sa_args, maxiter=50) for __ in range(self.numWorkers)]
+
+        self.sa_instances = [
+            SimulatedAnnealing(
+                TTtasks,
+                ETtasks,
+                maxiter,
+                toll,
+                iterationPerTemp,
+                initialTemp,
+                finalTemp,
+                tempReduction,
+                alpha,
+                beta,
+            )
+            for __ in range(self.numInstances)
+        ]
+
         self.maxIter = self.sa_instances[0].maxIter
+        self.solution_instance = self.sa_instances[0]
+        self.solution = self.solution_instance.solution
+        self.costs = [obj.currCost for obj in self.sa_instances]
 
-    def run(self):
-        print("----------- Parallel Annealing Solution ------------")
-        import cpuinfo
-
-        cpu = cpuinfo.get_cpu_info()
-        print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
-        costs = [obj.currCost for obj in self.sa_instances]
-        print("before", costs)
-        print()
-
+    def run(self, pbar=None):
         def func(args):
-            with tqdm(
-                total=self.sa_instances[args].maxIter,
-                position=args,
-                desc="Process: {}".format(args),
-                bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
-                leave=True,
-            ) as bar:
-                self.sa_instances[args].run(bar.update)
+            self.sa_instances[args].run()
             return self.sa_instances[args]
 
-        sa = []
-        with mp.Pool(mp.cpu_count()) as pool:
-            for sol in pool.imap_unordered(func, [(i) for i in range(self.numWorkers)]):
-                sa.append(sol)
+        solutions = []
+        with mp.Pool(self.numWorkers) as pool:
+            for sol in pool.imap_unordered(func, [(i) for i in range(self.numInstances)]):
+                solutions.append(sol)
+                if pbar:
+                    pbar()
 
-        costs = [obj.currCost for obj in sa]
-        print()
-        print("after", costs)
-        print("---------------------------------------------------")
-        self.solution = sa[np.argmin(costs)]
-        return self.solution
+        self.costs = [obj.currCost for obj in solutions]
+        self.solution_instance = solutions[np.argmin(self.costs)]
+        self.solution = self.solution_instance.solution
+
+    def printSolution(self):
+        self.solution_instance.printSolution()
+
+    def plotCost(self):
+        self.solution_instance.plotCost()
+
+    def plotCostHist(self):
+        plt.bar(list(range(self.numInstances)), self.costs)
+        plt.show()
 
 
 class GeneticAlgorithm(Optimizer):
-    def __init__(self, TTtasks, ETtasks, maxiter=100, toll=0.01, pop_size=10, p_cross=0.8, p_mut=0.2):
+    def __init__(
+        self,
+        TTtasks,
+        ETtasks,
+        maxiter=100,
+        toll=0.01,
+        pop_size=10,
+        p_cross=0.8,
+        p_mut=0.2,
+    ):
         super().__init__(TTtasks, ETtasks, maxiter, toll)
 
         self.popSize = pop_size
@@ -357,7 +400,11 @@ class GeneticAlgorithm(Optimizer):
                 )
             ]
         else:  # is deadline
-            s_list[gene] = self.clamp(s_list[gene] + random.randint(-10, 10) * 10, s_list[gene - 2], s_list[gene - 1])
+            s_list[gene] = self.clamp(
+                s_list[gene] + random.randint(-10, 10) * 10,
+                s_list[gene - 2],
+                s_list[gene - 1],
+            )
 
         new_solution = self.paramsFromList(s_list, solution)
 
