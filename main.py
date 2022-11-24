@@ -4,14 +4,13 @@ import libraries.dataloader as dataloader
 from libraries.optimizers import (
     SimulatedAnnealing,
     GeneticAlgorithm,
-    MultiSimulatedAnnealing,
 )
 from libraries.algorithms import EDF, EDP
 from libraries.graphplot import getTimetablePlot
 
 
 def SA(TT, ET):
-    sa = MultiSimulatedAnnealing(8, 8, TT, ET, maxiter=500)  # SimulatedAnnealing(TT, ET, maxiter=100)
+    sa = SimulatedAnnealing(TT, ET, numinstances=4, numworkers=4, maxiter=1000)
     # sa.plotTemperature()
     sa.printSolution()
 
@@ -27,22 +26,20 @@ def SA(TT, ET):
         with tqdm(total=sa.maxIter, desc="Iterations") as bar:
             sa.run(bar.update)
 
-    schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + sa.solution)
+    schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + sa.bestSolution)
     print(wcrt_TT)
-    for ps in sa.solution:
+    for ps in sa.bestSolution:
         schedulable_ET, wcrt_ET, __ = EDP(ps)
         print(wcrt_ET)
 
     sa.printSolution()
     sa.plotCost()
-    sa.plotCostHist()
 
-    getTimetablePlot(TT + sa.solution, timetable, group_tt=True).show()
+    getTimetablePlot(TT + sa.bestSolution, timetable, group_tt=True).show()
 
 
 def GA(TT, ET):
-    ga = GeneticAlgorithm(TT, ET, 10)
-    ga.printSolution()
+    ga = GeneticAlgorithm(TT, ET, numinstances=1, numworkers=1, maxiter=100, pop_size=16, num_parents=4)
 
     if False:
         import cProfile, pstats
@@ -56,16 +53,16 @@ def GA(TT, ET):
         with tqdm(total=ga.maxIter, desc="Iterations") as bar:
             ga.run(bar.update)
 
-    schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + ga.solution)
+    schedulable_TT, timetable, wcrt_TT, __ = EDF(TT + ga.bestSolution)
     print(wcrt_TT)
-    for ps in ga.solution:
+    for ps in ga.bestSolution:
         schedulable_ET, wcrt_ET, __ = EDP(ps)
         print(wcrt_ET)
 
     ga.printSolution()
     ga.plotCost()
 
-    getTimetablePlot(TT + ga.solution, timetable, group_tt=True).show()
+    getTimetablePlot(TT + ga.bestSolution, timetable, group_tt=True).show()
 
 
 def main():
@@ -79,8 +76,8 @@ def main():
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
 
-    SA(TT, ET)
-    # GA(TT, ET)
+    #SA(TT, ET)
+    GA(TT, ET)
 
 
 if __name__ == "__main__":
