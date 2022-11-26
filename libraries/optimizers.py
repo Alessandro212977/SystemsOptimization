@@ -8,6 +8,7 @@ from sympy import divisors
 from math import lcm
 import multiprocess as mp
 from tqdm import tqdm
+import wandb
 
 from libraries.algorithms import EDF, EDP
 import libraries.dataloader as dataloader
@@ -19,7 +20,7 @@ logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class Optimizer:
-    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1):
+    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, wandblogging=True):
         # Tasks
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
@@ -54,18 +55,26 @@ class Optimizer:
         self.currIter = [0] * self.numInstances
 
         # Datalog
-        self.datalog = [{"bins": [], "costs": [], "accepted_bins": [], "isvalid": 0, "ismin": 0} for __ in range(self.numInstances)]
+        self.datalog = [{"bins": [], "costs": [], "accepted_costs": [], "isvalid": 0, "ismin": 0} for __ in range(self.numInstances)]
+        self.wandbLog = wandblogging
+        if self.wandbLog:
+            self.wandbrun = wandb.init(project="SystemsOptimization", entity="alessandro26", name=self.__class__.__name__)
+            #self.wandbrun.config = {"numInstances": self.numInstances,
+            #                        "numWorkers": self.numWorkers,
+            #                        "maxIter": self.maxIter,
+            #                        "toll": self.toll}
 
     def plotCost(self, instance_idx='best'):
+        fig, ax = plt.subplots()
+
         if instance_idx == 'best':
             instance_idx = np.argmin(self.currCosts)
+            ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Best solution cost")
+        elif instance_idx == 'all':
+            for instance_idx in range(self.numInstances):
+                ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label=f"Instance {instance_idx}", color="#1f77b4", linestyle="dashed", linewidth=0.7)
+            ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost", color="red")
 
-        fig, ax = plt.subplots()
-        # ax.plot(self.datalog["bins"], self.datalog["cost"])
-        ax.plot(
-            self.datalog[instance_idx]["accepted_bins"],
-            [self.datalog[instance_idx]["costs"][i] for i in self.datalog[instance_idx]["accepted_bins"]],
-        )  # , color="red", marker="x")
         ax.set_ylim((0, 3))
         ax.set_xlim((0, self.maxIter))
         ax.grid()
@@ -164,15 +173,20 @@ class Optimizer:
     def runTask(self, idx, pbar=None):
         while not self.isTerminationCriteriaMet(idx):
             self.getNewSolution(idx)
-            self.datalog[idx]["bins"].append(self.currIter[idx])
-            self.datalog[idx]["costs"].append(self.newCosts[idx])
-
+            
             # if the new solution is better, accept it
             if self.accept(idx):
                 self.solutions[idx] = self.newSolutions[idx]
                 self.currCosts[idx] = self.newCosts[idx]
-                self.datalog[idx]["accepted_bins"].append(self.currIter[idx])
 
+            # Log data
+            self.datalog[idx]["bins"].append(self.currIter[idx])
+            self.datalog[idx]["costs"].append(self.newCosts[idx])
+            self.datalog[idx]["accepted_costs"].append(self.currCosts[idx])
+            if self.wandbLog:
+                #self.wandbrun.log({f"cost_instance_{idx}": self.newCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
+                self.wandbrun.log({f"accepted_cost_instance_{idx}": self.currCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
+                                    
             self.update(idx, pbar)
         return idx, self.solutions[idx], self.currCosts[idx], self.datalog[idx]
 
@@ -189,8 +203,25 @@ class Optimizer:
                     if pbar:
                         pbar()
 
+        self.datalog[0]["mean"] = [np.mean([self.datalog[idx]["accepted_costs"][i] for idx in range(self.numInstances)]) for i in range(self.maxIter)]
         self.bestSolution = self.solutions[np.argmin(self.currCosts)]
         self.bestCost = min(self.currCosts)
+        if self.wandbLog:
+            """
+            self.wandbrun.log({"datalog_cost" : wandb.plot.line_series(
+                        xs=self.datalog[0]["bins"], 
+                        ys=[self.datalog[idx]["costs"] for idx in range(self.numInstances)],
+                        keys=[f"cost_{idx}" for idx in range(self.numInstances)],
+                        title="Costs",
+                        xname="Iterations")})
+            """
+            self.wandbrun.log({"datalog_accepted_cost" : wandb.plot.line_series(
+                        xs=self.datalog[0]["bins"], 
+                        ys=[self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)],
+                        keys=[f"cost_{idx}" for idx in range(self.numInstances)],
+                        title="Accepted Costs",
+                        xname="Iterations")})
+
 
 
 class SimulatedAnnealing(Optimizer):
@@ -202,6 +233,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
+        wandblogging=True,
         iterationPerTemp=100,
         initialTemp=0.1,
         finalTemp=0.0001,
@@ -209,7 +241,7 @@ class SimulatedAnnealing(Optimizer):
         alpha=0.5,
         beta=5,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
 
         self.currTemps = [initialTemp] * self.numInstances
         self.finalTemp = finalTemp
@@ -297,12 +329,13 @@ class GeneticAlgorithm(Optimizer):
         numworkers=1,
         maxiter=10,
         toll=0.01,
+        wandblogging=True,
         pop_size=20,
         num_parents=8,
         p_cross=0.9,
         p_mut=0.1,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
 
         self.popSize = pop_size
         self.numParents = num_parents

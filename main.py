@@ -10,7 +10,7 @@ from libraries.graphplot import getTimetablePlot
 
 
 def SA(TT, ET):
-    sa = SimulatedAnnealing(TT, ET, numinstances=4, numworkers=4, maxiter=1000)
+    sa = SimulatedAnnealing(TT, ET, numinstances=18, numworkers=6, maxiter=800, wandblogging=False)
     # sa.plotTemperature()
     sa.printSolution()
 
@@ -33,13 +33,13 @@ def SA(TT, ET):
         print(wcrt_ET)
 
     sa.printSolution()
-    sa.plotCost()
+    sa.plotCost(instance_idx="all")
 
     getTimetablePlot(TT + sa.bestSolution, timetable, group_tt=True).show()
 
 
 def GA(TT, ET):
-    ga = GeneticAlgorithm(TT, ET, numinstances=1, numworkers=1, maxiter=100, pop_size=16, num_parents=4)
+    ga = GeneticAlgorithm(TT, ET, numinstances=2, numworkers=1, maxiter=100, pop_size=16, num_parents=4)
 
     if False:
         import cProfile, pstats
@@ -76,8 +76,8 @@ def main():
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
 
-    #SA(TT, ET)
-    GA(TT, ET)
+    SA(TT, ET)
+    #GA(TT, ET)
 
 
 if __name__ == "__main__":
