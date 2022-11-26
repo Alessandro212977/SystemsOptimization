@@ -20,7 +20,7 @@ logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class Optimizer:
-    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, wandblogging=True):
+    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, wandblogging=False):
         # Tasks
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
@@ -272,7 +272,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
-        wandblogging=True,
+        wandblogging=False,
         iterationPerTemp=100,
         initialTemp=0.1,
         finalTemp=0.0001,
@@ -368,7 +368,7 @@ class GeneticAlgorithm(Optimizer):
         numworkers=1,
         maxiter=10,
         toll=0.01,
-        wandblogging=True,
+        wandblogging=False,
         pop_size=20,
         num_parents=8,
         p_cross=0.9,

@@ -7,7 +7,7 @@ from numpy import arange
 
 
 def getTimetablePlot(TT, sigma, xmax=None, group_tt=False):
-    plt.rcParams["figure.figsize"] = [16, 7]
+    #plt.rcParams["figure.figsize"] = [16, 7]
     plt.rcParams["figure.autolayout"] = True
 
     fig, ax = plt.subplots()
