@@ -10,7 +10,7 @@ from libraries.graphplot import getTimetablePlot
 
 
 def SA(TT, ET):
-    sa = SimulatedAnnealing(TT, ET, numinstances=18, numworkers=6, maxiter=800, wandblogging=False)
+    sa = SimulatedAnnealing(TT, ET, numinstances=8, numworkers=8, maxiter=200, wandblogging=False)
     # sa.plotTemperature()
     sa.printSolution()
 
@@ -33,6 +33,8 @@ def SA(TT, ET):
         print(wcrt_ET)
 
     sa.printSolution()
+    sa.plotBars()
+
     sa.plotCost(instance_idx="all")
 
     getTimetablePlot(TT + sa.bestSolution, timetable, group_tt=True).show()
