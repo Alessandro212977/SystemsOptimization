@@ -1,112 +1,91 @@
 from libraries.tasks import PollingServer
 import libraries.dataloader as dataloader
 from math import lcm, ceil
+import numpy as np
 
 def EDF(tasks):
-    # LCM of TT task periods
-    T = lcm(*[obj.period for obj in tasks] )
-    t=0
-    sigma = ["idle"]*T
-    R = [0]*len(tasks)
-    WCRT = [0]*len(tasks)
-    C = [obj.duration for obj in tasks]
-    D = [obj.deadline for obj in tasks]
-    #N = [obj.name for obj in tasks]gi
-    D_copy = [obj.deadline for obj in tasks]
+    schedulable = True
+    T = lcm(*[obj.period for obj in tasks])
+    t = 0
+    timetable = ["idle"] * T
+    releases = [0] * len(tasks) #release time
+    wcrt = [-1] * len(tasks) #-1 = deadline missed
+    durations = [obj.duration for obj in tasks] #durations
+    deadlines = [obj.deadline for obj in tasks] #deadlines
+
+    penalty = [0] * len(tasks)
+
     while t < T:
         for i, task in enumerate(tasks):
-            if C[i] > 0 and D[i] <= t:
-                #print("t:", t, "deadline:", D[i], "C[i]:", C[i])
-                return [], []
-            if C[i] == 0 and D[i] >= t:
-                if t-R[i] >= WCRT[i]:
-                    WCRT[i] = t - R[i]
-                    #print("WCRT:", WCRT[i])
-
-            if t%task.period == 0:
-                R[i] = t
-                C[i] = task.duration 
-                D[i] = t + task.deadline
-                D_copy[i] = t + task.deadline
-                
-                #print("t:", t, "Im here task:", i, "deadline", task.deadline)
-                
-        if all(v == 0 for v in C):
-            sigma[t] = "Idle"
-        else:
-            earliest_deadline = min(D_copy)
-            deadline_index = D_copy.index(earliest_deadline)
-            if(C[deadline_index] > 0):
-                #if (N[deadline_index] == 'polling_server'):
-                #    self.poll_server.getTask()
-                sigma[t] = deadline_index
-                C[deadline_index] -= 1  
-                #print("deadline index:", deadline_index, "C", C[deadline_index], D_copy)
-                #print(" index of task:", earliest_deadline, D.index(earliest_deadline), D.index(D[deadline_index]), D)
-                #print()
-                if (C[deadline_index] == 0):
-                    #print("reset", C[deadline_index])
-                    D_copy[deadline_index] = 100000000   
-            else:
-                #print("im inside the else", deadline_index)
-                D_copy[deadline_index] = 100000000
-                earliest_deadline = min(D_copy)
-                deadline_index = D_copy.index(earliest_deadline)
-                sigma[t] = deadline_index
-                C[deadline_index] -= 1
+            if durations[i] > 0 and deadlines[i] <= t:
+                wcrt[i] = max(wcrt[i], T-releases[i])
+                penalty[i] = max(penalty[i], T-releases[i])
+                schedulable = False
+            if t % task.period == 0:
+                releases[i] = t
+                durations[i] = task.duration
+                deadlines[i] = t + task.deadline
+           
+        if any(v > 0 for v in durations): #if there is some task to schedule:
+            tmp = [dl if dr > 0 else 2*T for dl, dr in zip(deadlines, durations)]
+            ed_idx = tmp.index(min(tmp))
+            timetable[t] = ed_idx
+            durations[ed_idx] -= 1
+            if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
+                if t-releases[ed_idx] >= wcrt[ed_idx]:
+                    wcrt[ed_idx] = t-releases[ed_idx]
         t += 1
+
+    if any(v > 0 for v in durations):
+        for idx in [i for i, response in enumerate(wcrt) if response == -1]:
+            wcrt[idx] = max(wcrt[idx], T-releases[idx])
+            penalty[idx] = max(penalty[idx], T-releases[idx])
+            schedulable = False
         
-    if all(v > 0 for v in C):
-        return [], []
-    
-    return sigma, WCRT
+    return schedulable, timetable, wcrt, sum(penalty)/(T*len(tasks))
+
 
 def EDP(ps: PollingServer):
-    # alpha -> bandwidth
-    # Delta -> delay
-    # need to find out the way to calculate Cp, Tp, Dp
-    Cp = ps.duration #=budget?
-    Tp = ps.period
-    Dp = ps.deadline
-    delta = Tp + Dp -2 * Cp
-    alpha = Cp / Tp
-    
-    #supply = 0
-    #demand = 0
-    
-    P = [0]*len(ps.tasks)
+    delta = ps.period + ps.deadline - 2 * ps.duration
+    alpha = ps.duration / ps.period
+
     T = lcm(*[obj.period for obj in ps.tasks])
-    Period = [obj.period for obj in ps.tasks]
-    C = [obj.duration for obj in ps.tasks]
-    D = [obj.deadline for obj in ps.tasks]
-    #print(T)
-    for i, task in enumerate(ps.tasks):
+    WCRT = [T]*len(ps.tasks)
+    schedulable = True
+
+    penalty = 0
+
+    for i, ETtask1 in enumerate(ps.tasks):
         t = 0
-        responseTime = D[i] + 1
         while t <= T:
-            supply = alpha * (t - delta)
+            supply = max(0, alpha * (t - delta))
             demand = 0
-            for j, _ in enumerate(ps.tasks):
-                if P[j] >= P[i]:
-                    demand = demand + ceil(t / Period[j]) * C[j]
-            
-            if supply >= demand:
-                responseTime = t
+            for ETtask2 in ps.tasks:
+                if ETtask2.priority >= ETtask1.priority:
+                    demand += ceil(t / ETtask2.period) * ETtask2.duration
+
+            if supply >= demand and t>0:
+                WCRT[i] = t
                 break
             t += 1
-        
-        if responseTime > D[i]:
-            return False, responseTime
-    return True, responseTime
-                    
 
+        if WCRT[i] > ETtask1.deadline:
+            penalty += WCRT[i] - ETtask1.deadline
+            schedulable = False
+
+    return schedulable, WCRT, penalty/T
 
 if __name__ == "__main__":
-    path = "./test_cases/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+    path = "./test_cases/taskset_small.csv"
     dl = dataloader.DataLoader(path)
-    TT, ET  = dl.loadFile()
-    ps = PollingServer(duration=1800, period=2000, deadline=2000, tasks=ET)
-    
-    print(EDP(ps))
-    print(EDF(TT))
-        
+    TT, ET = dl.loadFile()
+    params = [(5, 16, 5), (1, 4, 1), (50, 400, 131)]#[(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
+    init_ps = []
+    for idx, sep in enumerate(range(1, 4)):#max_sep+1):
+        tasks = [task for task in ET if task.separation==sep]
+        budget, period, deadline = params[idx]
+        init_ps.append(PollingServer("Polling Server", budget, period, deadline, tasks, separation=sep))
+
+    print("EDP", [EDP(ps) for ps in init_ps])
+    schedulable, timetable, wcrt, penalty = EDF(TT + init_ps)
+    print("EDF", schedulable, wcrt, penalty)
