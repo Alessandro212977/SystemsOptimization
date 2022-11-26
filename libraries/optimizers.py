@@ -55,7 +55,7 @@ class Optimizer:
         self.currIter = [0] * self.numInstances
 
         # Datalog
-        self.datalog = [{"bins": [0], "costs": [self.currCosts[idx]], "accepted_costs": [self.currCosts[idx]], "isvalid": 0, "ismin": 0} for idx in range(self.numInstances)]
+        self.datalog = [{"bins": [0], "costs": [self.currCosts[idx]], "accepted_costs": [self.currCosts[idx]], "isvalid": 0, "istoll": 0, "ismin": 0} for idx in range(self.numInstances)]
         self.wandbLog = wandblogging
         if self.wandbLog:
             self.wandbrun = wandb.init(project="SystemsOptimization", entity="alessandro26", name=self.__class__.__name__)
@@ -72,10 +72,11 @@ class Optimizer:
             ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Best solution cost")
         elif instance_idx == 'all':
             for instance_idx in range(self.numInstances):
-                ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Instances" if instance_idx==0 else None, color="#1f77b4", linestyle="dashed", linewidth=0.7)
+                ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Instances" if instance_idx==0 else None, color="gray", linestyle="dashed", linewidth=0.7)
             ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost", color="red")
 
-        ax.axhline(1, linewidth=1, color="black")
+        ax.axhline(1, linewidth=1, color="green", label="is_valid")
+        ax.axhline(self.toll, linewidth=1, color="#1f77b4", label="is_toll")
         ax.set_ylim((0, 3))
         ax.set_xlim((0, self.maxIter))
         ax.grid()
@@ -89,18 +90,18 @@ class Optimizer:
         fig, ax = plt.subplots()
         x = list(range(self.numInstances))
         h_valid = [self.datalog[idx]["isvalid"] for idx in range(self.numInstances)]
-        h_min = [self.datalog[idx]["ismin"] if self.datalog[idx]["isvalid"]>0 else 0 for idx in range(self.numInstances)]
+        h_toll = [self.datalog[idx]["istoll"] for idx in range(self.numInstances)]
         h_invalid = [0 if self.datalog[idx]["isvalid"] > 0 else self.maxIter for idx in range(self.numInstances)]
 
-        ax.bar(x, h_min, alpha=0.5, label="is_min")
+        ax.bar(x, h_toll, alpha=0.5, label="is_toll")
         ax.bar(x, h_valid, alpha=0.5, label="is_valid", color="green")
         ax.bar(x, h_invalid, alpha=0.5, label="failed", color="red")
 
-        h_min_mean = np.mean([x for x in h_min if x>0])
+        h_toll_mean = np.mean([x for x in h_toll if x>0])
         h_valid_mean = np.mean([x for x in h_valid if x>0])
 
-        ax.axhline(h_min_mean, linewidth=1, label="is_valid mean")
-        ax.axhline(h_valid_mean, color='green', linewidth=1, label="is_min mean")
+        ax.axhline(h_toll_mean, linewidth=1, label="is_toll mean")
+        ax.axhline(h_valid_mean, color='green', linewidth=1, label="is_valid mean")
 
         ax.set_xticks(x)
 
@@ -217,6 +218,9 @@ class Optimizer:
             if self.datalog[idx]["accepted_costs"][-1] < 1 and self.datalog[idx]["accepted_costs"][-2] >=1:
                 #entered valid solutions
                 self.datalog[idx]["isvalid"] = self.currIter[idx]
+            if self.datalog[idx]["accepted_costs"][-1] < self.toll and self.datalog[idx]["accepted_costs"][-2] >=self.toll:
+                # save iteration when toll is reached
+                self.datalog[idx]["istoll"] = self.currIter[idx]
             if self.datalog[idx]["accepted_costs"][-1] < self.datalog[idx]["accepted_costs"][-2]:
                 # save iteration of the best cost
                 self.datalog[idx]["ismin"] = self.currIter[idx]
@@ -225,7 +229,7 @@ class Optimizer:
                 #self.wandbrun.log({f"cost_instance_{idx}": self.newCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
                 self.wandbrun.log({f"accepted_cost_instance_{idx}": self.currCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
                                     
-        return idx, self.solutions[idx], self.currCosts[idx], self.datalog[idx]
+        return idx, self.solutions[idx], self.currCosts[idx], self.currIter[idx], self.datalog[idx]
 
     def run(self, pbar=None):
         if self.numWorkers == 1:
@@ -233,16 +237,21 @@ class Optimizer:
                 self.runTask(i, pbar)
         else:
             with mp.Pool(self.numWorkers) as pool:
-                for idx, sol, cost, datalog in pool.imap_unordered(self.runTask, [(i) for i in range(self.numInstances)]):
+                for idx, sol, cost, iter, datalog in pool.imap_unordered(self.runTask, [(i) for i in range(self.numInstances)]):
                     self.solutions[idx] = sol
                     self.currCosts[idx] = cost
+                    self.currIter[idx] = iter
                     self.datalog[idx] = datalog
                     if pbar:
                         pbar()
 
+        for idx in range(self.numInstances):
+            self.datalog[idx]["bins"] = self.datalog[idx]["bins"] + list(range(self.datalog[idx]["bins"][-1]+1, self.maxIter+1))
+            self.datalog[idx]["accepted_costs"] = self.datalog[idx]["accepted_costs"] + [self.datalog[idx]["accepted_costs"][-1]] * (self.maxIter-self.currIter[idx])
+            self.datalog[idx]["costs"] = self.datalog[idx]["costs"] + [self.datalog[idx]["costs"][-1]] * (self.maxIter-self.currIter[idx])
+
         self.datalog[0]["mean"] = [np.mean([self.datalog[idx]["accepted_costs"][i] for idx in range(self.numInstances)]) for i in range(self.maxIter+1)]
-        #print("minimum", [self.datalog[idx]["isvalid"] for idx in range(self.numInstances)])
-        #print("valid", [self.datalog[idx]["isvalid"] for idx in range(self.numInstances)])
+
         self.bestSolution = self.solutions[np.argmin(self.currCosts)]
         self.bestCost = min(self.currCosts)
         if self.wandbLog:
