@@ -387,10 +387,23 @@ class GeneticAlgorithm(Optimizer):
 
         return new_solution
 
+    # random selection
     def selection(self, pop, scores):
-        # tournament selection
         ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
         return [pop[idx] for idx in ind]
+
+    # tournament selection
+    def selection2(self,pop, scores):
+        parents = []
+        for _ in range(0 ,self.numParents):
+            selection_parent = random.randint(0, len(pop))
+            for _ in range(0, 5):
+                k = random.randint(0, len(pop))
+                # check if better
+                if scores[k] < scores[selection_parent]:
+                    selection_parent = k
+            parents.append(pop[selection_parent])
+        return parents
 
     def getNewSolution(self, idx):
         parent_list = self.selection(self.populations[idx], self.scores[idx])
