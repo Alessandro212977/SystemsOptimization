@@ -475,17 +475,19 @@ class GeneticAlgorithm(Optimizer):
         if self.selectionMode == 'topn':
             ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
             return [pop[idx] for idx in ind]
-        elif self.selectionMode == 'tournament':
+
+        elif self.selectionMode == 'tournament': #how is it called?
             parents = []
-            for _ in range(0 ,self.numParents):
-                selection_parent = random.randint(0, len(pop))
-                for _ in range(0, 5):
-                    k = random.randint(0, len(pop))
+            for __ in range(0 ,self.numParents):
+                selected_parent = random.randint(0, self.popSize-1)
+                for __ in range(0, 5):
+                    k = random.randint(0, self.popSize-1)
                     # check if better
-                    if scores[k] < scores[selection_parent]:
-                        selection_parent = k
-                parents.append(pop[selection_parent])
+                    if scores[k] < scores[selected_parent]:
+                        selected_parent = k
+                parents.append(pop[selected_parent])
             return parents
+
         else:
             raise NotImplementedError(f"Required selection mode ({self.selectionMode}) is not available")
 
