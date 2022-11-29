@@ -75,6 +75,22 @@ def EDP(ps: PollingServer):
 
     return schedulable, WCRT, penalty / T
 
+def extention1(tasks):
+    T = lcm(*[obj.period for obj in tasks])
+    ## Di = relative deadline
+    deadlines = [obj.deadline for obj in tasks]  # deadlines
+    ## Ci = worst case excetion time
+    wrct = EDF(tasks)
+    ## Ti = period
+    periods = [obj.period for obj in tasks]  # periods
+    sum = 0
+    for t in range(0, T):
+        for i in range(0 , len(deadlines)):
+            sum = sum + (((t +  periods[i] - deadlines[i])/  periods[i]) * wrct[i])
+        if t  > sum :
+            return False
+    return True
+
 
 if __name__ == "__main__":
     path = "./test_cases/taskset_small.csv"
