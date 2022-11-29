@@ -1,0 +1,54 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.13.5
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.9.13
+    start_time: 1669456825.320624
+    t:
+      1:
+      - 55
+      2:
+      - 55
+      3:
+      - 23
+      4: 3.9.13
+      5: 0.13.5
+      8:
+      - 3
+      - 5
+    visualize:
+      datalog:
+        panel_config:
+          fieldSettings:
+            lineKey: lineKey
+            lineVal: lineVal
+            step: step
+          panelDefId: wandb/lineseries/v0
+          stringSettings:
+            title: Two Random Metrics
+            xname: x units
+          transform:
+            name: tableWithLeafColNames
+          userQuery:
+            queryFields:
+            - args:
+              - name: runSets
+                value: ${runSets}
+              fields:
+              - fields: []
+                name: id
+              - fields: []
+                name: name
+              - fields: []
+                name: _defaultColorIndex
+              - args:
+                - name: tableKey
+                  value: datalog_table
+                fields: []
+                name: summaryTable
+              name: runSets
+        panel_type: Vega2

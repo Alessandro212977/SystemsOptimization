@@ -80,14 +80,14 @@ def extention1(tasks):
     ## Di = relative deadline
     deadlines = [obj.deadline for obj in tasks]  # deadlines
     ## Ci = worst case excetion time
-    wrct = EDF(tasks)
+    __, __, wcrt, __ = EDF(tasks)
     ## Ti = period
     periods = [obj.period for obj in tasks]  # periods
     sum = 0
     for t in range(0, T):
         for i in range(0 , len(deadlines)):
-            sum = sum + (((t +  periods[i] - deadlines[i])/  periods[i]) * wrct[i])
-        if t  > sum :
+            sum += ((t +  periods[i] - deadlines[i])/  periods[i]) * wcrt[i]
+        if t > sum :
             return False
     return True
 
@@ -105,4 +105,5 @@ if __name__ == "__main__":
 
     print("EDP", [EDP(ps) for ps in init_ps])
     schedulable, timetable, wcrt, penalty = EDF(TT + init_ps)
+    print("Extension1", extention1(TT + init_ps))
     print("EDF", schedulable, wcrt, penalty)

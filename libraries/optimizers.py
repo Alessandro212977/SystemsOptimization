@@ -301,6 +301,7 @@ class GeneticAlgorithm(Optimizer):
         num_parents=8,
         p_cross=0.9,
         p_mut=0.1,
+        selection='topn'
     ):
         super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll)
 
@@ -308,6 +309,7 @@ class GeneticAlgorithm(Optimizer):
         self.numParents = num_parents
         self.pCross = p_cross
         self.pMut = p_mut
+        self.selectionMode = selection
 
         self.populations = self.initialPopulations()
         self.scores = [self.computeCosts(self.populations[idx]) for idx in range(self.numInstances)]
@@ -389,21 +391,22 @@ class GeneticAlgorithm(Optimizer):
 
     # random selection
     def selection(self, pop, scores):
-        ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
-        return [pop[idx] for idx in ind]
-
-    # tournament selection
-    def selection2(self,pop, scores):
-        parents = []
-        for _ in range(0 ,self.numParents):
-            selection_parent = random.randint(0, len(pop))
-            for _ in range(0, 5):
-                k = random.randint(0, len(pop))
-                # check if better
-                if scores[k] < scores[selection_parent]:
-                    selection_parent = k
-            parents.append(pop[selection_parent])
-        return parents
+        if self.selectionMode == 'topn':
+            ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
+            return [pop[idx] for idx in ind]
+        elif self.selectionMode == 'tournament':
+            parents = []
+            for _ in range(0 ,self.numParents):
+                selection_parent = random.randint(0, len(pop))
+                for _ in range(0, 5):
+                    k = random.randint(0, len(pop))
+                    # check if better
+                    if scores[k] < scores[selection_parent]:
+                        selection_parent = k
+                parents.append(pop[selection_parent])
+            return parents
+        else:
+            raise NotImplementedError(f"Required selection mode ({self.selectionMode}) is not available")
 
     def getNewSolution(self, idx):
         parent_list = self.selection(self.populations[idx], self.scores[idx])
