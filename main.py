@@ -14,9 +14,11 @@ def experiment(data_path, profiling=False):
     dl = dataloader.DataLoader(data_path)
     TT, ET = dl.loadFile()
 
-    optim = SimulatedAnnealing(TT, ET, numinstances=4, numworkers=4, maxiter=500, toll=0.1)
+    optim = SimulatedAnnealing(TT, ET, numinstances=1, numworkers=1, maxiter=100, toll=0.01)
     #optim = GeneticAlgorithm(TT, ET, numinstances=2, numworkers=1, maxiter=10, pop_size=16, num_parents=4)
     # optim.plotTemperature()
+
+    optim.printSolution()
 
     bar_iter = optim.maxIter*optim.numInstances if optim.numWorkers==1 else optim.numInstances
 
@@ -46,6 +48,6 @@ if __name__ == "__main__":
     cpu = cpuinfo.get_cpu_info()
     print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
 
-    path = "./test_cases/taskset_small.csv"
-    # path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+    #path = "./test_cases/taskset_small.csv"
+    path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     experiment(path)

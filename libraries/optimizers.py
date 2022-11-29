@@ -24,6 +24,7 @@ class Optimizer:
         # Tasks
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
+        self.freeETtasks = [task for task in self.ETtasks if task.separation==0] #ET tasks with separation = 0
 
         # Instances and workers
         self.numInstances = numinstances
@@ -117,8 +118,24 @@ class Optimizer:
         for __ in range(n):
             max_sep = max([task.separation for task in self.ETtasks])
             sol = []
+            num_extra_ps = 1# random.randint(0, len(self.freeETtasks))
+            #print(f"num_extra_ps: {num_extra_ps}")
+            freeTasksIdx = np.random.choice(range(0, num_extra_ps+max_sep), len(self.freeETtasks), replace=True)
+            #print("Free tasks", self.freeETtasks)
+
+            for ps_idx in range(num_extra_ps):
+                tasks = [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == ps_idx]
+                if len(tasks) == 0:
+                    continue
+                #print("tasks for ps", ps_idx, tasks)
+                period = random.choice(self.period_divisors)
+                budget = random.randint(1, period)
+                deadline = random.randint(budget, period)
+                sol.append(PollingServer("PS E{}".format(ps_idx), budget, period, deadline, tasks, 0))
+
             for sep in range(1, max_sep + 1):
                 tasks = [task for task in self.ETtasks if task.separation == sep]
+                tasks = tasks + [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == sep]
                 period = random.choice(self.period_divisors)
                 budget = random.randint(1, period)
                 deadline = random.randint(budget, period)
@@ -366,8 +383,32 @@ class SimulatedAnnealing(Optimizer):
                     ps.separation,
                 )
             )
-        self.newSolutions[idx] = new_center
-        self.newCosts[idx] = self.computeCosts([new_center])[0]
+
+        #switch ET tasks with sep = 0
+        tobeassigned = []
+        for i, ps in enumerate(new_center):
+            tasks = [idx for idx, task in enumerate(ps.tasks) if task.separation == 0]
+            if len(tasks) == 0:
+                continue
+            #if random.random() > 0.5:
+            tobeassigned.append((i, random.choice(tasks), random.randint(0, len(new_center))))
+
+        for ps_from, task_idx, ps_to in tobeassigned:
+            if ps_to >= len(new_center):
+                new_center.append(PollingServer(f"PS E{ps_to}", new_center[ps_from].duration, new_center[ps_from].period, new_center[ps_from].deadline, tasks=[], separation=0))
+            new_center[ps_to].tasks.append(new_center[ps_from].tasks.pop(task_idx))
+
+        #remove empty PS
+        new_new_center = []
+        for ps in new_center:
+            if len(ps.tasks) > 0:
+                new_new_center.append(ps)
+        #print("num ps", len(new_center), tobeassigned, "num ps after deletion", len(new_new_center))
+
+        self.newSolutions[idx] = new_new_center
+        self.newCosts[idx] = self.computeCosts([new_new_center])[0]
+
+
 
     def update(self, idx=0, pbar=None):
         super().update(idx, pbar)
