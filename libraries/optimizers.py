@@ -337,7 +337,7 @@ class SimulatedAnnealing(Optimizer):
             return cond or random.random() < math.exp(-(self.newCosts[idx] - self.currCosts[idx]) / self.currTemps[idx])
         return cond or False
 
-    def getNewSolution(self, idx):
+    def getNewSolution(self, idx, dur_radius=50, dln_radius=50):
         new_center = []
         for ps in self.solutions[idx]:
             new_period = self.period_divisors[
@@ -347,8 +347,15 @@ class SimulatedAnnealing(Optimizer):
                     len(self.period_divisors) - 1,
                 )
             ]
-            new_duration = self.clamp(ps.duration + random.randint(-10, 10) * 10, 1, new_period)
-            new_deadline = self.clamp(ps.deadline + random.randint(-10, 10) * 10, new_duration, new_period)
+
+            duration = self.clamp(ps.duration, 1, new_period)
+            dur_low, dur_up = max(1, duration-dur_radius), min(new_period, duration+dur_radius)
+            new_duration = random.randint(dur_low, dur_up)
+
+            deadline = self.clamp(ps.deadline, new_duration, new_period)
+            dln_low, dln_up = max(new_duration, deadline-dln_radius), min(new_period, deadline+dln_radius)
+            new_deadline = random.randint(dln_low, dln_up)
+
             new_center.append(
                 PollingServer(
                     ps.name,
