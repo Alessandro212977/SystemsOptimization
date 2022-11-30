@@ -20,7 +20,7 @@ logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class Optimizer:
-    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, wandblogging=False):
+    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, extra_ps=0, wandblogging=False):
         # Tasks
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
@@ -43,7 +43,7 @@ class Optimizer:
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
 
         # Initialize solutions
-        self.solutions = self.initializeSolutions(self.numInstances)
+        self.solutions = self.initializeSolutions(self.numInstances, extra_ps)
         self.newSolutions = [None] * self.numInstances
         self.bestSolution = self.solutions[0]  # global
 
@@ -113,33 +113,31 @@ class Optimizer:
         ax.legend()
         plt.show()
 
-    def initializeSolutions(self, n=1):
+    def initializeSolutions(self, n=1, num_extra_ps=0):
         solutions = []
+        max_sep = max([task.separation for task in self.ETtasks])
         for __ in range(n):
-            max_sep = max([task.separation for task in self.ETtasks])
             sol = []
-            num_extra_ps = 1# random.randint(0, len(self.freeETtasks))
-            #print(f"num_extra_ps: {num_extra_ps}")
-            freeTasksIdx = np.random.choice(range(0, num_extra_ps+max_sep), len(self.freeETtasks), replace=True)
-            #print("Free tasks", self.freeETtasks)
-
-            for ps_idx in range(num_extra_ps):
-                tasks = [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == ps_idx]
-                if len(tasks) == 0:
-                    continue
-                #print("tasks for ps", ps_idx, tasks)
-                period = random.choice(self.period_divisors)
-                budget = random.randint(1, period)
-                deadline = random.randint(budget, period)
-                sol.append(PollingServer("PS E{}".format(ps_idx), budget, period, deadline, tasks, 0))
+            num_e_ps = random.randint(0, len(self.freeETtasks)) if num_extra_ps=="random" else num_extra_ps
+            freeTasksIdx = np.random.choice(range(1, num_e_ps+max_sep+1), len(self.freeETtasks), replace=True)
+            print("num eps", num_e_ps, "free tasks idx", freeTasksIdx)
 
             for sep in range(1, max_sep + 1):
-                tasks = [task for task in self.ETtasks if task.separation == sep]
-                tasks = tasks + [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == sep]
+                tasks = [task for task in self.ETtasks if task.separation == sep] + [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == sep]
                 period = random.choice(self.period_divisors)
                 budget = random.randint(1, period)
                 deadline = random.randint(budget, period)
-                sol.append(PollingServer("PS {}".format(sep), budget, period, deadline, tasks, sep))
+                sol.append(PollingServer("PS {}".format(sep), budget, period, deadline, tasks.copy(), sep))
+
+            for ps_idx in range(max_sep, max_sep+num_e_ps):
+                tasks = [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == ps_idx]
+                if len(tasks) > 0:
+                    period = random.choice(self.period_divisors)
+                    budget = random.randint(1, period)
+                    deadline = random.randint(budget, period)
+                    sol.append(PollingServer("PS E{}".format(ps_idx), budget, period, deadline, tasks.copy(), 0))
+
+            assert len(self.ETtasks) == sum([len(ps.tasks) for ps in sol]), f"missing some tasks {len(self.ETtasks)} {sum([len(ps.tasks) for ps in sol])}"
             solutions.append(sol)
         return solutions
 
@@ -305,7 +303,7 @@ class SimulatedAnnealing(Optimizer):
         alpha=0.5,
         beta=5,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps="random", wandblogging=wandblogging)
 
         self.currTemps = [initialTemp] * self.numInstances
         self.finalTemp = finalTemp
@@ -355,19 +353,25 @@ class SimulatedAnnealing(Optimizer):
 
     def switchTasks(self, solution, num_switches=1):
         for __ in range(num_switches):
+            #choose a ps from where to the the task
             ps_from = random.randint(0, len(solution)-1)
+
+            #list of possible tasks
             switchable_tasks = [idx for idx, task in enumerate(solution[ps_from].tasks) if task.separation == 0]
-            if len(switchable_tasks) == 0:
-                continue
-            task_idx = random.choice(switchable_tasks)
-            task_obj = solution[ps_from].tasks.pop(task_idx)
-            ps_to = random.randint(0, len(solution))
-            if ps_to >= len(solution):
-                new_ps = PollingServer(f"PS E{ps_to}", solution[ps_from].duration, solution[ps_from].period, solution[ps_from].deadline, tasks=[], separation=0)
-                solution.append(new_ps)
-            solution[ps_to].tasks.append(task_obj)
-            if len(solution[ps_from].tasks) == 0:
-                solution.pop(ps_from)
+
+            if len(switchable_tasks) > 0:
+                #choose a destination ps (If it is a new one, make a new PS)
+                ps_to = random.randint(0, len(solution))
+                if ps_to >= len(solution):
+                    new_ps = PollingServer(f"PS E{ps_to}", solution[ps_from].duration, solution[ps_from].period, solution[ps_from].deadline, tasks=[], separation=0)
+                    solution.append(new_ps)
+
+                #choose a task and do the switch
+                solution[ps_to].tasks.append(solution[ps_from].tasks.pop(random.choice(switchable_tasks)))
+
+                #if the from_ps is now empty then remove it
+                if len(solution[ps_from].tasks) == 0:
+                    solution.pop(ps_from)
         return solution
 
     def getNewSolution(self, idx, dur_radius=50, dln_radius=50):
@@ -402,13 +406,10 @@ class SimulatedAnnealing(Optimizer):
             )
 
         #switch ET tasks with sep = 0
-        new_center = self.switchTasks(new_center, len(new_center))
+        new_center = self.switchTasks(new_center, 1)
 
         self.newSolutions[idx] = new_center
         self.newCosts[idx] = self.computeCosts([new_center])[0]
-
-        
-
 
     def update(self, idx=0, pbar=None):
         super().update(idx, pbar)
@@ -431,7 +432,7 @@ class GeneticAlgorithm(Optimizer):
         p_cross=0.9,
         p_mut=0.1,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps=0, wandblogging=wandblogging)
 
         self.popSize = pop_size
         self.numParents = num_parents
@@ -444,7 +445,7 @@ class GeneticAlgorithm(Optimizer):
     def initialPopulations(self):
         pop = []
         for __ in range(self.numInstances):
-            pop.append(self.initializeSolutions(self.popSize))
+            pop.append(self.initializeSolutions(self.popSize, num_extra_ps=0))
         return pop
 
     def paramsToList(self, solution):
@@ -464,11 +465,24 @@ class GeneticAlgorithm(Optimizer):
                     params[i],
                     params[i + 1],
                     params[i + 2],
-                    solution_old[i // 3].tasks,
+                    solution_old[i // 3].tasks.copy(),
                     solution_old[i // 3].separation,
                 )
             )
         return solution
+
+    def tasksCrossover(self, sol1, sol2, cross_percentage):
+        for ps1, ps2 in zip(sol1, sol2):
+            sol1_tasks = [task for task in ps1.tasks.copy() if task.separation == 0]
+            sol2_tasks = [task for task in ps2.tasks.copy() if task.separation == 0]
+            num_tasks_from_1 = round(cross_percentage * len(sol1_tasks))
+            num_tasks_from_2 = round(cross_percentage * len(sol2_tasks))
+            sol1_new_tasks = sol1_tasks[:num_tasks_from_1] + sol2_tasks[num_tasks_from_2:]
+            sol2_new_tasks = sol1_tasks[num_tasks_from_1:] + sol2_tasks[:num_tasks_from_2]
+            ps1.tasks = [task for task in ps1.tasks.copy() if task.separation != 0] + sol1_new_tasks
+            ps2.tasks = [task for task in ps2.tasks.copy() if task.separation != 0] + sol2_new_tasks
+            #print(f"num tasks sol1: {len(sol1_tasks)} {len(sol1_new_tasks)}, num tasks sol2: {len(sol2_tasks)} {len(sol2_new_tasks)}, percentage1: {num_tasks_from_1}, percentage2: {num_tasks_from_2}, ")
+        return sol1, sol2
 
     def crossover(self, p1, p2):
         # crossover two parents to create two children
@@ -477,12 +491,15 @@ class GeneticAlgorithm(Optimizer):
 
         p1_list, p2_list = self.paramsToList(p1), self.paramsToList(p2)
 
-        pt = random.randint(1, len(p1_list))
+        pt = random.randint(1, len(p1_list)-1)
         # perform crossover
         c1 = p1_list[:pt] + p2_list[pt:]
         c2 = p2_list[:pt] + p1_list[pt:]
 
         c1, c2 = self.paramsFromList(c1, p1), self.paramsFromList(c2, p2)
+
+        # switch tasks with separation 0
+        c1, c2 = self.tasksCrossover(c1, c2, pt/len(p1_list))
 
         return c1, c2
 
