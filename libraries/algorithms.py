@@ -77,12 +77,14 @@ def EDP(ps: PollingServer):
 
 
 if __name__ == "__main__":
-    path = "./test_cases/taskset_small.csv"
+    path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"  # "./test_cases/taskset_small.csv"
     dl = dataloader.DataLoader(path)
     TT, ET = dl.loadFile()
     params = [(5, 16, 5), (1, 4, 1), (50, 400, 131)]  # [(1070, 2000, 1580), (200, 2000, 1470), (100, 1000, 1000)]
     init_ps = []
-    for idx, sep in enumerate(range(1, 4)):  # max_sep+1):
+    print("NUM ET", len(ET))
+    max_sep = 2
+    for idx, sep in enumerate(range(max_sep + 1)):
         tasks = [task for task in ET if task.separation == sep]
         budget, period, deadline = params[idx]
         init_ps.append(PollingServer("Polling Server", budget, period, deadline, tasks, separation=sep))
