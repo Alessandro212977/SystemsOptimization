@@ -220,7 +220,6 @@ class Optimizer:
         while not self.isTerminationCriteriaMet(idx):
             # update iterations
             self.update(idx, pbar)
-
             self.getNewSolution(idx)
             
             # if the new solution is better, accept it
@@ -354,8 +353,26 @@ class SimulatedAnnealing(Optimizer):
             return cond or random.random() < math.exp(-(self.newCosts[idx] - self.currCosts[idx]) / self.currTemps[idx])
         return cond or False
 
+    def switchTasks(self, solution, num_switches=1):
+        for __ in range(num_switches):
+            ps_from = random.randint(0, len(solution)-1)
+            switchable_tasks = [idx for idx, task in enumerate(solution[ps_from].tasks) if task.separation == 0]
+            if len(switchable_tasks) == 0:
+                continue
+            task_idx = random.choice(switchable_tasks)
+            task_obj = solution[ps_from].tasks.pop(task_idx)
+            ps_to = random.randint(0, len(solution))
+            if ps_to >= len(solution):
+                new_ps = PollingServer(f"PS E{ps_to}", solution[ps_from].duration, solution[ps_from].period, solution[ps_from].deadline, tasks=[], separation=0)
+                solution.append(new_ps)
+            solution[ps_to].tasks.append(task_obj)
+            if len(solution[ps_from].tasks) == 0:
+                solution.pop(ps_from)
+        return solution
+
     def getNewSolution(self, idx, dur_radius=50, dln_radius=50):
         new_center = []
+        
         for ps in self.solutions[idx]:
             new_period = self.period_divisors[
                 self.clamp(
@@ -379,35 +396,18 @@ class SimulatedAnnealing(Optimizer):
                     new_duration,
                     new_period,
                     new_deadline,
-                    ps.tasks,
+                    ps.tasks.copy(),
                     ps.separation,
                 )
             )
 
         #switch ET tasks with sep = 0
-        tobeassigned = []
-        for i, ps in enumerate(new_center):
-            tasks = [idx for idx, task in enumerate(ps.tasks) if task.separation == 0]
-            if len(tasks) == 0:
-                continue
-            #if random.random() > 0.5:
-            tobeassigned.append((i, random.choice(tasks), random.randint(0, len(new_center))))
+        new_center = self.switchTasks(new_center, len(new_center))
 
-        for ps_from, task_idx, ps_to in tobeassigned:
-            if ps_to >= len(new_center):
-                new_center.append(PollingServer(f"PS E{ps_to}", new_center[ps_from].duration, new_center[ps_from].period, new_center[ps_from].deadline, tasks=[], separation=0))
-            new_center[ps_to].tasks.append(new_center[ps_from].tasks.pop(task_idx))
+        self.newSolutions[idx] = new_center
+        self.newCosts[idx] = self.computeCosts([new_center])[0]
 
-        #remove empty PS
-        new_new_center = []
-        for ps in new_center:
-            if len(ps.tasks) > 0:
-                new_new_center.append(ps)
-        #print("num ps", len(new_center), tobeassigned, "num ps after deletion", len(new_new_center))
-
-        self.newSolutions[idx] = new_new_center
-        self.newCosts[idx] = self.computeCosts([new_new_center])[0]
-
+        
 
 
     def update(self, idx=0, pbar=None):
