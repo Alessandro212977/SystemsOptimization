@@ -120,7 +120,6 @@ class Optimizer:
             sol = []
             num_e_ps = random.randint(0, len(self.freeETtasks)) if num_extra_ps=="random" else num_extra_ps
             freeTasksIdx = np.random.choice(range(1, num_e_ps+max_sep+1), len(self.freeETtasks), replace=True)
-            print("num eps", num_e_ps, "free tasks idx", freeTasksIdx)
 
             for sep in range(1, max_sep + 1):
                 tasks = [task for task in self.ETtasks if task.separation == sep] + [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == sep]
@@ -481,7 +480,6 @@ class GeneticAlgorithm(Optimizer):
             sol2_new_tasks = sol1_tasks[num_tasks_from_1:] + sol2_tasks[:num_tasks_from_2]
             ps1.tasks = [task for task in ps1.tasks.copy() if task.separation != 0] + sol1_new_tasks
             ps2.tasks = [task for task in ps2.tasks.copy() if task.separation != 0] + sol2_new_tasks
-            #print(f"num tasks sol1: {len(sol1_tasks)} {len(sol1_new_tasks)}, num tasks sol2: {len(sol2_tasks)} {len(sol2_new_tasks)}, percentage1: {num_tasks_from_1}, percentage2: {num_tasks_from_2}, ")
         return sol1, sol2
 
     def crossover(self, p1, p2):
@@ -533,7 +531,7 @@ class GeneticAlgorithm(Optimizer):
 
         return new_solution
 
-    def selection(self, pop, scores):
+    def selection(self, pop: list, scores: list) -> list:
         # tournament selection
         ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
         return [pop[idx] for idx in ind]
@@ -547,12 +545,14 @@ class GeneticAlgorithm(Optimizer):
         random.shuffle(parent_list)
 
         for p1, p2 in parent_list[: self.popSize // 2]:
-            # crossover and mutation
-            for c in self.crossover(p1, p2):
-                # mutation
-                self.mutation(c)
-                # store for next generation
-                children.append(c)
+            # crossover
+            c1, c2 = self.crossover(p1, p2)
+            # mutation
+            c1, c2 = self.mutation(c1), self.mutation(c2)
+            # store for next generation
+            children.append(c1)
+            children.append(c2)
+            
         # replace population
         self.populations[idx] = children
         self.scores[idx] = self.computeCosts(children)

@@ -15,7 +15,7 @@ def experiment(data_path, profiling=False):
     TT, ET = dl.loadFile()
 
     #optim = SimulatedAnnealing(TT, ET, numinstances=4, numworkers=4, maxiter=500, toll=0.01)
-    optim = GeneticAlgorithm(TT, ET, numinstances=1, numworkers=1, maxiter=20, pop_size=16, num_parents=4)
+    optim = GeneticAlgorithm(TT, ET, numinstances=4, numworkers=4, maxiter=20, pop_size=16, num_parents=4, p_cross=0.8)
     # optim.plotTemperature()
 
     optim.printSolution()
