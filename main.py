@@ -8,32 +8,36 @@ from libraries.optimizers import (
 from libraries.algorithms import EDF, EDP
 from libraries.graphplot import getTimetablePlot
 
+
 def experiment(data_path, profiling=False):
 
     # load tasks
     dl = dataloader.DataLoader(data_path)
     TT, ET = dl.loadFile()
 
-    #optim = SimulatedAnnealing(TT, ET, numinstances=4, numworkers=4, maxiter=500, toll=0.01)
-    optim = GeneticAlgorithm(TT, ET, numinstances=4, numworkers=4, maxiter=20, pop_size=16, num_parents=4, p_cross=0.8)
+    optim = SimulatedAnnealing(
+        TT, ET, numinstances=4, numworkers=4, maxiter=1000, toll=0.01, initialTemp=0.1, alpha=0.5
+    )
+    # optim = GeneticAlgorithm(TT, ET, numinstances=4, numworkers=4, maxiter=100, pop_size=16, num_parents=4, p_cross=0.8)
     # optim.plotTemperature()
 
     optim.printSolution()
 
-    bar_iter = optim.maxIter*optim.numInstances if optim.numWorkers==1 else optim.numInstances
+    bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
 
     if profiling:
         import cProfile, pstats
 
         with cProfile.Profile() as pr:
-            with tqdm(total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}") as bar:  # progress bar
+            with tqdm(
+                total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}"
+            ) as bar:  # progress bar
                 optim.run(bar.update)
         pr = pstats.Stats(pr)
         pr.sort_stats("cumulative").print_stats(10)
     else:
         with tqdm(total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}") as bar:
             optim.run(bar.update)
-
 
     optim.printSolution()
     optim.plotBars()
@@ -45,9 +49,10 @@ def experiment(data_path, profiling=False):
 
 if __name__ == "__main__":
     import cpuinfo
+
     cpu = cpuinfo.get_cpu_info()
     print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
 
-    #path = "./test_cases/taskset_small.csv"
+    # path = "./test_cases/taskset_small.csv"
     path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
     experiment(path)

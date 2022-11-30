@@ -31,5 +31,9 @@ class PollingServer(Event):
         self.separation = separation
 
     def __repr__(self):
-        return super().__repr__() + ", sep: {}".format(self.separation) + ", tasks(sep): {}".format([(task.name, task.separation) for task in self.tasks])
-        #return super().__repr__() + ", sep: {}".format(self.separation) + ", num of tasks: {}".format(len(self.tasks))
+        return (
+            super().__repr__()
+            + ", sep: {}".format(self.separation)
+            + ", tasks(sep): {}".format([(task.name, task.separation) for task in self.tasks])
+        )
+        # return super().__repr__() + ", sep: {}".format(self.separation) + ", num of tasks: {}".format(len(self.tasks))
