@@ -360,6 +360,10 @@ class SimulatedAnnealing(Optimizer):
         tempReduction="geometric",
         alpha=0.5,
         beta=5,
+        dur_radius=200, 
+        dln_radius=200, 
+        priority_prob=0,
+        free_tasks_switches=1
     ):
         super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging)
 
@@ -374,6 +378,11 @@ class SimulatedAnnealing(Optimizer):
             "geometric": self.geometricTempReduction,  # t = t * a
             "slowDecrease": self.slowDecreaseTempReduction,  # t = t / 1 + Bt
         }[tempReduction]
+
+        self.dur_radius=dur_radius 
+        self.dln_radius=dln_radius
+        self.priority_prob=priority_prob
+        self.free_tasks_switches = free_tasks_switches
 
     def linearTempReduction(self, idx):
         self.currTemps[idx] -= self.alpha
@@ -409,8 +418,8 @@ class SimulatedAnnealing(Optimizer):
             return cond or random.random() < math.exp(-(self.newCosts[idx] - self.currCosts[idx]) / self.currTemps[idx])
         return cond or False
 
-    def switchTasks(self, solution, num_switches=1):
-        for __ in range(num_switches):
+    def switchTasks(self, solution):
+        for __ in range(self.free_tasks_switches):
             # choose a ps from where to the the task
             ps_from = random.randint(0, len(solution) - 1)
 
@@ -439,7 +448,13 @@ class SimulatedAnnealing(Optimizer):
                     solution.pop(ps_from)
         return solution
 
-    def getNewSolution(self, idx, dur_radius=200, dln_radius=200):
+    def switchPriorities(self, solution):
+        for ps in solution:
+            for task in ps.tasks:
+                if random.random() < self.priority_prob:
+                    task.priority = self.clamp(task.priority+random.randint(-1, 1), 0, 6)
+
+    def getNewSolution(self, idx):
         new_center = []
 
         for ps in self.solutions[idx]:
@@ -452,11 +467,11 @@ class SimulatedAnnealing(Optimizer):
             ]
 
             duration = self.clamp(ps.duration, 1, new_period)
-            dur_low, dur_up = max(1, duration - dur_radius), min(new_period, duration + dur_radius)
+            dur_low, dur_up = max(1, duration - self.dur_radius), min(new_period, duration + self.dur_radius)
             new_duration = random.randint(dur_low, dur_up)
 
             deadline = self.clamp(ps.deadline, new_duration, new_period)
-            dln_low, dln_up = max(new_duration, deadline - dln_radius), min(new_period, deadline + dln_radius)
+            dln_low, dln_up = max(new_duration, deadline - self.dln_radius), min(new_period, deadline + self.dln_radius)
             new_deadline = random.randint(dln_low, dln_up)
 
             new_center.append(
@@ -471,7 +486,9 @@ class SimulatedAnnealing(Optimizer):
             )
 
         # switch ET tasks with sep = 0
-        new_center = self.switchTasks(new_center, 1)
+        new_center = self.switchTasks(new_center)
+
+        self.switchPriorities(new_center)
 
         self.newSolutions[idx] = new_center
         self.newCosts[idx] = self.computeCosts([new_center])[0]

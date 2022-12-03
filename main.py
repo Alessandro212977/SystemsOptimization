@@ -35,6 +35,10 @@ def experiment(data_path, profiling=False):
             tempReduction=config.SA["tempReduction"],
             alpha=config.SA["alpha"],
             beta=config.SA["beta"],
+            dur_radius=config.SA["dur_radius"], 
+            dln_radius=config.SA["dln_radius"], 
+            priority_prob=config.SA["priority_prob"],
+            free_tasks_switches=config.SA["free_tasks_switches"]
         )
 
     elif config.algorithm == "GA":

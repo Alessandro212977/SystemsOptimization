@@ -32,6 +32,10 @@ SA = dict(
     tempReduction="geometric",
     alpha=0.5,
     beta=5,
+    dur_radius=200, 
+    dln_radius=200, 
+    priority_prob=0,
+    free_tasks_switches=1,
     temptune=False,
 )
 
