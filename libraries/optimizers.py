@@ -114,7 +114,7 @@ class Optimizer:
         ax.set_ylabel("Cost")
         ax.set_title("Cost of accepted solutions")
         ax.legend()
-        plt.show()
+        return plt
 
     def plotBars(self):
         fig, ax = plt.subplots()
@@ -140,7 +140,7 @@ class Optimizer:
         ax.set_ylabel("Iterations")
         ax.set_title("validity and optimality of instances")
         ax.legend()
-        plt.show()
+        return plt
 
     def initializeSolutions(self, n=1, num_extra_ps=0):
         solutions = []
@@ -214,22 +214,27 @@ class Optimizer:
 
         return costs
 
-    def printSolution(self):
-        print("-------------------------- Solution --------------------------")
+    def printSolution(self, get=False):
+        string = "-------------------------- Solution --------------------------\n"
+
         wcrt_tt = EDF(self.TTtasks + self.bestSolution)[2]
         wcrt_et = []
         for ps in self.bestSolution:
-            print(ps)
+            string += str(ps) + "\n"
             wcrt_et = wcrt_et + EDP(ps)[1]
-        print(
-            "Solution cost: {:.5f}, valid: {}".format(
-                self.computeCosts([self.bestSolution])[0],
-                self.areValidNeighbors([self.bestSolution])[0],
-            )
+
+        string += "Solution cost: {:.5f}, valid: {}\n".format(
+            self.computeCosts([self.bestSolution])[0],
+            self.areValidNeighbors([self.bestSolution])[0],
         )
-        print("Average WCRT for TT+PS task: {:.2f} ms (max: {} ms)".format(np.mean(wcrt_tt), max(wcrt_tt)))
-        print("Average WCRT for ET task: {:.2f} ms (max: {} ms)".format(np.mean(wcrt_et), max(wcrt_et)))
-        print("-------------------------------------------------------------")
+        string += "Average WCRT for TT+PS task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_tt), max(wcrt_tt))
+        string += "Average WCRT for ET task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_et), max(wcrt_et))
+        string += "-------------------------------------------------------------"
+
+        if get:
+            return string
+        else:
+            print(string)
 
     def isTerminationCriteriaMet(self, idx=0) -> bool:
         # Termination criteria
@@ -347,7 +352,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
-        extra_ps ="random",
+        extra_ps="random",
         wandblogging=False,
         iterationPerTemp=100,
         initialTemp=0.1,
@@ -356,9 +361,7 @@ class SimulatedAnnealing(Optimizer):
         alpha=0.5,
         beta=5,
     ):
-        super().__init__(
-            TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging
-        )
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging)
 
         self.currTemps = [initialTemp] * self.numInstances
         self.finalTemp = finalTemp
@@ -397,7 +400,7 @@ class SimulatedAnnealing(Optimizer):
         # plt.yscale("log")
         plt.grid()
         plt.legend()
-        plt.show()
+        return plt
 
     def accept(self, idx=0):
         cond = super().accept(idx)

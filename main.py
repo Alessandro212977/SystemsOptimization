@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import cpuinfo
 
 import libraries.dataloader as dataloader
 from libraries.optimizers import (
@@ -11,6 +12,8 @@ import config
 
 
 def experiment(data_path, profiling=False):
+    cpu = cpuinfo.get_cpu_info()
+    print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
 
     # load tasks
     dl = dataloader.DataLoader(data_path)
@@ -53,7 +56,7 @@ def experiment(data_path, profiling=False):
         quit()
 
     if config.SA["temptune"]:
-        optim.plotTemperature()
+        optim.plotTemperature().show()
         quit()
 
     bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
@@ -73,17 +76,45 @@ def experiment(data_path, profiling=False):
             optim.run(bar.update)
 
     optim.printSolution()
-    optim.plotBars()
-    optim.plotCost(instance_idx="all")
 
-    __, timetable, __, __ = EDF(TT + optim.bestSolution)
-    getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True).show()
+    if config.show_plot:
+        optim.plotBars().show()
+        optim.plotCost(instance_idx="all").show()
+
+        __, timetable, __, __ = EDF(TT + optim.bestSolution)
+        getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True).show()
+
+    if config.write_log:
+        try:
+            import os
+
+            os.mkdir(config.log_directory + config.log_name)
+        except FileExistsError:
+            print(f"Overwriting {config.log_name} folder")
+
+        bar_plt = optim.plotBars()
+        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.png")
+        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.eps")
+        cost_plt = optim.plotCost(instance_idx="all")
+        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.png")
+        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.eps")
+        __, timetable, __, __ = EDF(TT + optim.bestSolution)
+        timetable_plot = getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True)
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.png")
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.eps")
+
+        with open(config.log_directory + config.log_name + "/log.txt", "w") as logfile:
+            logfile.write("Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"]))
+            logfile.write(f"Taskset: {config.test_case_path}\n\n")
+            logfile.write(f"Algorithm: {optim.__class__.__name__}\n")
+            logfile.write("Parameters:\n")
+
+            for key, val in {"SimulatedAnnealing": config.SA, "GeneticAlgorithm": config.GA}[
+                optim.__class__.__name__
+            ].items():
+                logfile.write(f"    {key}: {val}\n")
+            logfile.write("\n" + optim.printSolution(get=True))
 
 
 if __name__ == "__main__":
-    import cpuinfo
-
-    cpu = cpuinfo.get_cpu_info()
-    print("{}, {} cores".format(cpu["brand_raw"], cpu["count"]))
-
     experiment(config.test_case_path, config.profiling)

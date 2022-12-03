@@ -8,16 +8,23 @@ D = "./test_cases/taskset__1643188521-a_0.5-b_0.4-n_30-m_20-d_unif-p_2000-q_4000
 E = "./test_cases/taskset__1643188594-a_0.7-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__7__tsk.csv"
 
 test_case_path = A
+
 profiling = False
 
 algorithm = "SA"
 
+show_plot = False
+
+write_log = True
+log_directory = "./results/"
+log_name = "test"
+
 SA = dict(
     numinstances=1,
     numworkers=1,
-    maxiter=500,
+    maxiter=10,
     toll=0.01,
-    extra_ps=0,#"random",
+    extra_ps=0,  # "random",
     wandblogging=False,
     iterationPerTemp=100,
     initialTemp=0.1,

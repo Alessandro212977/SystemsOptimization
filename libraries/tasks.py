@@ -34,7 +34,7 @@ class PollingServer(Event):
         return (
             super().__repr__()
             + ", sep: {}\n".format(self.separation)
-            + "    tasks: sep, pri: {}".format(
-                "; ".join([f"{task.name}: {task.separation} {task.priority}" for task in self.tasks])
+            + "    tasks:\tsep\tpri\n    {}".format(
+                "\n    ".join([f"{task.name}:\t{task.separation}\t{task.priority}" for task in self.tasks])
             )
         )
