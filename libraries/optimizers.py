@@ -16,6 +16,7 @@ from libraries.tasks import PollingServer
 from libraries.graphplot import getTimetablePlot
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 logging.basicConfig()
@@ -309,8 +310,9 @@ class Optimizer:
                 self.maxIter - self.currIter[idx]
             )
 
-
-        self.datalog[0]["mean"] = np.mean(np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0)
+        self.datalog[0]["mean"] = np.mean(
+            np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0
+        )
 
         self.bestSolution = self.solutions[np.argmin(self.currCosts)]
         self.bestCost = min(self.currCosts)
