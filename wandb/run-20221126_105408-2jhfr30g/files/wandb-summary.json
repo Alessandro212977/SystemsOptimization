@@ -1,0 +1,1 @@
+{"cost_instance_0": 1.2821125, "iter_instance_0": 99, "_timestamp": 1669456457.884608, "_runtime": 9.150625944137573, "_step": 399, "accepted_cost_instance_0": 0.28143035714285713, "cost_instance_1": 1.9324928571428572, "iter_instance_1": 99, "accepted_cost_instance_1": 0.25013214285714286, "_wandb": {"runtime": 13}}
