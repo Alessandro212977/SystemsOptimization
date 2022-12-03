@@ -22,9 +22,9 @@ log_name = "test"
 SA = dict(
     numinstances=1,
     numworkers=1,
-    maxiter=10,
+    maxiter=100,
     toll=0.01,
-    extra_ps=0,  # "random",
+    extra_ps=0,#"random",
     wandblogging=False,
     iterationPerTemp=100,
     initialTemp=0.1,
@@ -35,8 +35,9 @@ SA = dict(
     dur_radius=200, 
     dln_radius=200, 
     priority_prob=0,
-    free_tasks_switches=1,
-    temptune=False,
+    free_tasks_switches=3,
+    no_upper_lim=True,
+    temptune=False    
 )
 
 GA = dict(

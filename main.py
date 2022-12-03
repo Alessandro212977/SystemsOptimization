@@ -38,7 +38,8 @@ def experiment(data_path, profiling=False):
             dur_radius=config.SA["dur_radius"], 
             dln_radius=config.SA["dln_radius"], 
             priority_prob=config.SA["priority_prob"],
-            free_tasks_switches=config.SA["free_tasks_switches"]
+            free_tasks_switches=config.SA["free_tasks_switches"],
+            no_upper_lim=config.SA["no_upper_lim"]
         )
 
     elif config.algorithm == "GA":
@@ -122,3 +123,4 @@ def experiment(data_path, profiling=False):
 
 if __name__ == "__main__":
     experiment(config.test_case_path, config.profiling)
+    print("All done")

@@ -363,7 +363,8 @@ class SimulatedAnnealing(Optimizer):
         dur_radius=200, 
         dln_radius=200, 
         priority_prob=0,
-        free_tasks_switches=1
+        free_tasks_switches=1,
+        no_upper_lim=True,
     ):
         super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging)
 
@@ -383,6 +384,7 @@ class SimulatedAnnealing(Optimizer):
         self.dln_radius=dln_radius
         self.priority_prob=priority_prob
         self.free_tasks_switches = free_tasks_switches
+        self.no_upper_lim = no_upper_lim
 
     def linearTempReduction(self, idx):
         self.currTemps[idx] -= self.alpha
@@ -401,10 +403,11 @@ class SimulatedAnnealing(Optimizer):
             metropolis = [np.exp(-d / t) for t in temperatures]
             # plot iterations vs metropolis
             label = "diff=%.3f" % d
-            plt.plot(iterations, metropolis, marker="x", label=label)
+            plt.plot([i*self.currIterationPerTemp for i in iterations], metropolis, marker="x", label=label)
         # inalize plot
         plt.xlabel("Iteration")
-        plt.ylabel("Metropolis Criterion")
+        plt.ylabel("Acceptance probability")
+        plt.title("Metropolis Criterion")
         # plt.ylim((0.0001, 1))
         # plt.yscale("log")
         plt.grid()
@@ -428,7 +431,7 @@ class SimulatedAnnealing(Optimizer):
 
             if len(switchable_tasks) > 0:
                 # choose a destination ps (If it is a new one, make a new PS)
-                ps_to = random.randint(0, len(solution))
+                ps_to = random.randint(0, len(solution) if self.no_upper_lim else len(solution)-1)
                 if ps_to >= len(solution):
                     new_ps = PollingServer(
                         f"PS E{ps_to}",
