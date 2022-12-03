@@ -1,6 +1,7 @@
-from libraries.tasks import PollingServer
+from math import ceil, lcm
+
 import libraries.dataloader as dataloader
-from math import lcm, ceil
+from libraries.tasks import PollingServer
 
 
 def EDF(tasks):
@@ -75,6 +76,7 @@ def EDP(ps: PollingServer):
 
     return schedulable, WCRT, penalty / T
 
+
 def extention1(tasks):
     T = lcm(*[obj.period for obj in tasks])
     ## Di = relative deadline
@@ -85,9 +87,9 @@ def extention1(tasks):
     periods = [obj.period for obj in tasks]  # periods
     sum = 0
     for t in range(0, T):
-        for i in range(0 , len(deadlines)):
-            sum += ((t +  periods[i] - deadlines[i])/  periods[i]) * wcrt[i]
-        if t > sum :
+        for i in range(0, len(deadlines)):
+            sum += ((t + periods[i] - deadlines[i]) / periods[i]) * wcrt[i]
+        if t > sum:
             return False
     return True
 

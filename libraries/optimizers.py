@@ -1,21 +1,20 @@
 import itertools
-import random
-import math
 import logging
-import numpy as np
-import matplotlib.pyplot as plt
-from sympy import divisors
-from math import lcm
-import multiprocess as mp
-from tqdm import tqdm
-import wandb
-
-from libraries.algorithms import EDF, EDP
-import libraries.dataloader as dataloader
-from libraries.tasks import PollingServer
-from libraries.graphplot import getTimetablePlot
-
+import math
+import random
 import warnings
+from math import lcm
+
+import matplotlib.pyplot as plt
+import multiprocess as mp
+import numpy as np
+from sympy import divisors
+from tqdm import tqdm
+
+import libraries.dataloader as dataloader
+import wandb
+from libraries.algorithms import EDF, EDP
+from libraries.tasks import PollingServer
 
 warnings.filterwarnings("ignore")
 
@@ -319,8 +318,11 @@ class Optimizer:
             np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0
         )
 
-        self.bestSolution = self.solutions[np.argmin(self.currCosts)]
-        self.bestCost = min(self.currCosts)
+        best_idx = np.argmin(self.currCosts)
+        self.bestSolution = self.solutions[best_idx]
+        self.bestCost = self.currCosts[best_idx]
+        assert self.bestCost == min(self.currCosts)
+
         if self.wandbLog:
             """
             self.wandbrun.log({"datalog_cost" : wandb.plot.line_series(
@@ -360,8 +362,8 @@ class SimulatedAnnealing(Optimizer):
         tempReduction="geometric",
         alpha=0.5,
         beta=5,
-        dur_radius=200, 
-        dln_radius=200, 
+        dur_radius=200,
+        dln_radius=200,
         priority_prob=0,
         free_tasks_switches=1,
         no_upper_lim=True,
@@ -380,9 +382,9 @@ class SimulatedAnnealing(Optimizer):
             "slowDecrease": self.slowDecreaseTempReduction,  # t = t / 1 + Bt
         }[tempReduction]
 
-        self.dur_radius=dur_radius 
-        self.dln_radius=dln_radius
-        self.priority_prob=priority_prob
+        self.dur_radius = dur_radius
+        self.dln_radius = dln_radius
+        self.priority_prob = priority_prob
         self.free_tasks_switches = free_tasks_switches
         self.no_upper_lim = no_upper_lim
 
@@ -403,7 +405,7 @@ class SimulatedAnnealing(Optimizer):
             metropolis = [np.exp(-d / t) for t in temperatures]
             # plot iterations vs metropolis
             label = "diff=%.3f" % d
-            plt.plot([i*self.currIterationPerTemp for i in iterations], metropolis, marker="x", label=label)
+            plt.plot([i * self.currIterationPerTemp for i in iterations], metropolis, marker="x", label=label)
         # inalize plot
         plt.xlabel("Iteration")
         plt.ylabel("Acceptance probability")
@@ -431,7 +433,7 @@ class SimulatedAnnealing(Optimizer):
 
             if len(switchable_tasks) > 0:
                 # choose a destination ps (If it is a new one, make a new PS)
-                ps_to = random.randint(0, len(solution) if self.no_upper_lim else len(solution)-1)
+                ps_to = random.randint(0, len(solution) if self.no_upper_lim else len(solution) - 1)
                 if ps_to >= len(solution):
                     new_ps = PollingServer(
                         f"PS E{ps_to}",
@@ -455,7 +457,7 @@ class SimulatedAnnealing(Optimizer):
         for ps in solution:
             for task in ps.tasks:
                 if random.random() < self.priority_prob:
-                    task.priority = self.clamp(task.priority+random.randint(-1, 1), 0, 6)
+                    task.priority = self.clamp(task.priority + random.randint(-1, 1), 0, 6)
 
     def getNewSolution(self, idx):
         new_center = []
@@ -516,7 +518,7 @@ class GeneticAlgorithm(Optimizer):
         num_parents=8,
         p_cross=0.9,
         p_mut=0.1,
-        selection='topn'
+        selection="topn",
     ):
         super().__init__(
             TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps=0, wandblogging=wandblogging
@@ -623,16 +625,16 @@ class GeneticAlgorithm(Optimizer):
 
     # random selection
     def selection(self, pop, scores):
-        if self.selectionMode == 'topn':
+        if self.selectionMode == "topn":
             ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
             return [pop[idx] for idx in ind]
 
-        elif self.selectionMode == 'tournament': #how is it called?
+        elif self.selectionMode == "tournament":  # how is it called?
             parents = []
-            for __ in range(0 ,self.numParents):
-                selected_parent = random.randint(0, self.popSize-1)
+            for __ in range(0, self.numParents):
+                selected_parent = random.randint(0, self.popSize - 1)
                 for __ in range(0, 5):
-                    k = random.randint(0, self.popSize-1)
+                    k = random.randint(0, self.popSize - 1)
                     # check if better
                     if scores[k] < scores[selected_parent]:
                         selected_parent = k
@@ -682,7 +684,8 @@ if __name__ == "__main__":
     # sa.plotTemperature()
 
     if False:
-        import cProfile, pstats
+        import cProfile
+        import pstats
 
         with cProfile.Profile() as pr:
             with tqdm(total=sa.maxIter, desc="Iterations") as bar:  # progress bar

@@ -24,7 +24,7 @@ SA = dict(
     numworkers=1,
     maxiter=100,
     toll=0.01,
-    extra_ps=0,#"random",
+    extra_ps=0,  # "random",
     wandblogging=False,
     iterationPerTemp=100,
     initialTemp=0.1,
@@ -32,12 +32,12 @@ SA = dict(
     tempReduction="geometric",
     alpha=0.5,
     beta=5,
-    dur_radius=200, 
-    dln_radius=200, 
+    dur_radius=200,
+    dln_radius=200,
     priority_prob=0,
     free_tasks_switches=3,
     no_upper_lim=True,
-    temptune=False    
+    temptune=False,
 )
 
 GA = dict(
@@ -50,5 +50,5 @@ GA = dict(
     num_parents=4,
     p_cross=0.8,
     p_mut=0.1,
-    selection="topn"
+    selection="topn",
 )

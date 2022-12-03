@@ -1,5 +1,6 @@
 import pandas as pd
-from libraries.tasks import TT, ET
+
+from libraries.tasks import ET, TT
 
 
 class DataLoader:

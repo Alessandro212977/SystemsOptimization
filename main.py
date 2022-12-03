@@ -1,14 +1,11 @@
-from tqdm import tqdm
 import cpuinfo
+from tqdm import tqdm
 
+import config
 import libraries.dataloader as dataloader
-from libraries.optimizers import (
-    SimulatedAnnealing,
-    GeneticAlgorithm,
-)
 from libraries.algorithms import EDF
 from libraries.graphplot import getTimetablePlot
-import config
+from libraries.optimizers import GeneticAlgorithm, SimulatedAnnealing
 
 
 def experiment(data_path, profiling=False):
@@ -35,11 +32,11 @@ def experiment(data_path, profiling=False):
             tempReduction=config.SA["tempReduction"],
             alpha=config.SA["alpha"],
             beta=config.SA["beta"],
-            dur_radius=config.SA["dur_radius"], 
-            dln_radius=config.SA["dln_radius"], 
+            dur_radius=config.SA["dur_radius"],
+            dln_radius=config.SA["dln_radius"],
             priority_prob=config.SA["priority_prob"],
             free_tasks_switches=config.SA["free_tasks_switches"],
-            no_upper_lim=config.SA["no_upper_lim"]
+            no_upper_lim=config.SA["no_upper_lim"],
         )
 
     elif config.algorithm == "GA":
@@ -55,7 +52,7 @@ def experiment(data_path, profiling=False):
             num_parents=config.GA["num_parents"],
             p_cross=config.GA["p_cross"],
             p_mut=config.GA["p_mut"],
-            selection=config.GA["selection"]
+            selection=config.GA["selection"],
         )
     else:
         print(f"{config.algorithm} not recognized")
@@ -68,7 +65,8 @@ def experiment(data_path, profiling=False):
     bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
 
     if profiling:
-        import cProfile, pstats
+        import cProfile
+        import pstats
 
         with cProfile.Profile() as pr:
             with tqdm(
