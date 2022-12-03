@@ -5,7 +5,7 @@ Configuration file for setting experiments parameters
 test_case_path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
 profiling = False
 
-algorithm = "SA"
+algorithm = "GA"
 
 SA = dict(
     numinstances=1,
