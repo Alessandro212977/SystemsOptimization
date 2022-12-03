@@ -1,17 +1,23 @@
 """
 Configuration file for setting experiments parameters
 """
+A = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+B = "./test_cases/taskset__1643188120-a_0.1-b_0.7-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__6__tsk.csv"
+C = "./test_cases/taskset__1643188302-a_0.3-b_0.3-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__36__tsk.csv"
+D = "./test_cases/taskset__1643188521-a_0.5-b_0.4-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__18__tsk.csv"
+E = "./test_cases/taskset__1643188594-a_0.7-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__7__tsk.csv"
 
-test_case_path = "./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
+test_case_path = A
 profiling = False
 
-algorithm = "GA"
+algorithm = "SA"
 
 SA = dict(
     numinstances=1,
     numworkers=1,
-    maxiter=100,
+    maxiter=500,
     toll=0.01,
+    extra_ps=0,#"random",
     wandblogging=False,
     iterationPerTemp=100,
     initialTemp=0.1,

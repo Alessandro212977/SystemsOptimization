@@ -347,6 +347,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
+        extra_ps ="random",
         wandblogging=False,
         iterationPerTemp=100,
         initialTemp=0.1,
@@ -356,7 +357,7 @@ class SimulatedAnnealing(Optimizer):
         beta=5,
     ):
         super().__init__(
-            TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps="random", wandblogging=wandblogging
+            TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging
         )
 
         self.currTemps = [initialTemp] * self.numInstances

@@ -24,6 +24,7 @@ def experiment(data_path, profiling=False):
             numworkers=config.SA["numworkers"],
             maxiter=config.SA["maxiter"],
             toll=config.SA["toll"],
+            extra_ps=config.SA["extra_ps"],
             wandblogging=config.SA["wandblogging"],
             iterationPerTemp=config.SA["iterationPerTemp"],
             initialTemp=config.SA["initialTemp"],
