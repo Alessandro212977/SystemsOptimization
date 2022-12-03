@@ -11,7 +11,7 @@ test_case_path = A
 
 profiling = False
 
-algorithm = "SA"
+algorithm = "GA"
 
 show_plot = False
 
@@ -50,4 +50,5 @@ GA = dict(
     num_parents=4,
     p_cross=0.8,
     p_mut=0.1,
+    selection="topn"
 )

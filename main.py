@@ -55,7 +55,7 @@ def experiment(data_path, profiling=False):
             num_parents=config.GA["num_parents"],
             p_cross=config.GA["p_cross"],
             p_mut=config.GA["p_mut"],
-            selection=config.GA["topn"]
+            selection=config.GA["selection"]
         )
     else:
         print(f"{config.algorithm} not recognized")
