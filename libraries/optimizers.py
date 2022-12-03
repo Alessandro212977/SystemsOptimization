@@ -15,15 +15,22 @@ import libraries.dataloader as dataloader
 from libraries.tasks import PollingServer
 from libraries.graphplot import getTimetablePlot
 
+import warnings
+
+warnings.filterwarnings("ignore")
+
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 
 class Optimizer:
-    def __init__(self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, wandblogging=False):
+    def __init__(
+        self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, extra_ps=0, wandblogging=False
+    ):
         # Tasks
         self.TTtasks = TTtasks
         self.ETtasks = ETtasks
+        self.freeETtasks = [task for task in self.ETtasks if task.separation == 0]  # ET tasks with separation = 0
 
         # Instances and workers
         self.numInstances = numinstances
@@ -42,7 +49,7 @@ class Optimizer:
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
 
         # Initialize solutions
-        self.solutions = self.initializeSolutions(self.numInstances)
+        self.solutions = self.initializeSolutions(self.numInstances, extra_ps)
         self.newSolutions = [None] * self.numInstances
         self.bestSolution = self.solutions[0]  # global
 
@@ -55,24 +62,47 @@ class Optimizer:
         self.currIter = [0] * self.numInstances
 
         # Datalog
-        self.datalog = [{"bins": [0], "costs": [self.currCosts[idx]], "accepted_costs": [self.currCosts[idx]], "isvalid": 0, "istoll": 0, "ismin": 0} for idx in range(self.numInstances)]
+        self.datalog = [
+            {
+                "bins": [0],
+                "costs": [self.currCosts[idx]],
+                "accepted_costs": [self.currCosts[idx]],
+                "isvalid": 0,
+                "istoll": 0,
+                "ismin": 0,
+            }
+            for idx in range(self.numInstances)
+        ]
         self.wandbLog = wandblogging
         if self.wandbLog:
-            self.wandbrun = wandb.init(project="SystemsOptimization", entity="alessandro26", name=self.__class__.__name__)
-            #self.wandbrun.config = {"numInstances": self.numInstances,
+            self.wandbrun = wandb.init(
+                project="SystemsOptimization", entity="alessandro26", name=self.__class__.__name__
+            )
+            # self.wandbrun.config = {"numInstances": self.numInstances,
             #                        "numWorkers": self.numWorkers,
             #                        "maxIter": self.maxIter,
             #                        "toll": self.toll}
 
-    def plotCost(self, instance_idx='best'):
+    def plotCost(self, instance_idx="best"):
         fig, ax = plt.subplots()
 
-        if instance_idx == 'best':
+        if instance_idx == "best":
             instance_idx = np.argmin(self.currCosts)
-            ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Best solution cost")
-        elif instance_idx == 'all':
+            ax.plot(
+                self.datalog[instance_idx]["bins"],
+                self.datalog[instance_idx]["accepted_costs"],
+                label="Best solution cost",
+            )
+        elif instance_idx == "all":
             for instance_idx in range(self.numInstances):
-                ax.plot(self.datalog[instance_idx]["bins"], self.datalog[instance_idx]["accepted_costs"], label="Instances" if instance_idx==0 else None, color="gray", linestyle="dashed", linewidth=0.7)
+                ax.plot(
+                    self.datalog[instance_idx]["bins"],
+                    self.datalog[instance_idx]["accepted_costs"],
+                    label="Instances" if instance_idx == 0 else None,
+                    color="gray",
+                    linestyle="dashed",
+                    linewidth=0.7,
+                )
             ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost", color="red")
 
         ax.axhline(1, linewidth=1, color="green", label="is_valid")
@@ -84,7 +114,7 @@ class Optimizer:
         ax.set_ylabel("Cost")
         ax.set_title("Cost of accepted solutions")
         ax.legend()
-        plt.show()
+        return plt
 
     def plotBars(self):
         fig, ax = plt.subplots()
@@ -97,11 +127,11 @@ class Optimizer:
         ax.bar(x, h_valid, alpha=0.5, label="is_valid", color="green")
         ax.bar(x, h_invalid, alpha=0.5, label="failed", color="red")
 
-        h_toll_mean = np.mean([x for x in h_toll if x>0])
-        h_valid_mean = np.mean([x for x in h_valid if x>0])
+        h_toll_mean = np.mean([x for x in h_toll if x > 0])
+        h_valid_mean = np.mean([x for x in h_valid if x > 0])
 
         ax.axhline(h_toll_mean, linewidth=1, label="is_toll mean")
-        ax.axhline(h_valid_mean, color='green', linewidth=1, label="is_valid mean")
+        ax.axhline(h_valid_mean, color="green", linewidth=1, label="is_valid mean")
 
         ax.set_xticks(x)
 
@@ -110,19 +140,37 @@ class Optimizer:
         ax.set_ylabel("Iterations")
         ax.set_title("validity and optimality of instances")
         ax.legend()
-        plt.show()
+        return plt
 
-    def initializeSolutions(self, n=1):
+    def initializeSolutions(self, n=1, num_extra_ps=0):
         solutions = []
+        max_sep = max([task.separation for task in self.ETtasks])
         for __ in range(n):
-            max_sep = max([task.separation for task in self.ETtasks])
             sol = []
+            num_e_ps = random.randint(0, len(self.freeETtasks)) if num_extra_ps == "random" else num_extra_ps
+            freeTasksIdx = np.random.choice(range(1, num_e_ps + max_sep + 1), len(self.freeETtasks), replace=True)
+
             for sep in range(1, max_sep + 1):
-                tasks = [task for task in self.ETtasks if task.separation == sep]
+                tasks = [task for task in self.ETtasks if task.separation == sep] + [
+                    task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == sep
+                ]
                 period = random.choice(self.period_divisors)
                 budget = random.randint(1, period)
                 deadline = random.randint(budget, period)
-                sol.append(PollingServer("PS {}".format(sep), budget, period, deadline, tasks, sep))
+                sol.append(PollingServer("PS {}".format(sep), budget, period, deadline, tasks.copy(), sep))
+
+            for ps_idx in range(max_sep + 1, max_sep + num_e_ps + 1):
+                tasks = [task for i, task in enumerate(self.freeETtasks) if freeTasksIdx[i] == ps_idx]
+
+                if len(tasks) > 0:
+                    period = random.choice(self.period_divisors)
+                    budget = random.randint(1, period)
+                    deadline = random.randint(budget, period)
+                    sol.append(PollingServer("PS E{}".format(ps_idx), budget, period, deadline, tasks.copy(), 0))
+
+            assert len(self.ETtasks) == sum(
+                [len(ps.tasks) for ps in sol]
+            ), f"missing some tasks {len(self.ETtasks)} {sum([len(ps.tasks) for ps in sol])}"
             solutions.append(sol)
         return solutions
 
@@ -166,22 +214,27 @@ class Optimizer:
 
         return costs
 
-    def printSolution(self):
-        print("-------------------------- Solution --------------------------")
+    def printSolution(self, get=False):
+        string = "-------------------------- Solution --------------------------\n"
+
         wcrt_tt = EDF(self.TTtasks + self.bestSolution)[2]
         wcrt_et = []
         for ps in self.bestSolution:
-            print(ps)
+            string += str(ps) + "\n"
             wcrt_et = wcrt_et + EDP(ps)[1]
-        print(
-            "Solution cost: {:.5f}, valid: {}".format(
-                self.computeCosts([self.bestSolution])[0],
-                self.areValidNeighbors([self.bestSolution])[0],
-            )
+
+        string += "Solution cost: {:.5f}, valid: {}\n".format(
+            self.computeCosts([self.bestSolution])[0],
+            self.areValidNeighbors([self.bestSolution])[0],
         )
-        print("Average WCRT for TT+PS task: {:.2f} ms (max: {} ms)".format(np.mean(wcrt_tt), max(wcrt_tt)))
-        print("Average WCRT for ET task: {:.2f} ms (max: {} ms)".format(np.mean(wcrt_et), max(wcrt_et)))
-        print("-------------------------------------------------------------")
+        string += "Average WCRT for TT+PS task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_tt), max(wcrt_tt))
+        string += "Average WCRT for ET task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_et), max(wcrt_et))
+        string += "-------------------------------------------------------------"
+
+        if get:
+            return string
+        else:
+            print(string)
 
     def isTerminationCriteriaMet(self, idx=0) -> bool:
         # Termination criteria
@@ -203,9 +256,8 @@ class Optimizer:
         while not self.isTerminationCriteriaMet(idx):
             # update iterations
             self.update(idx, pbar)
-
             self.getNewSolution(idx)
-            
+
             # if the new solution is better, accept it
             if self.accept(idx):
                 self.solutions[idx] = self.newSolutions[idx]
@@ -215,10 +267,13 @@ class Optimizer:
             self.datalog[idx]["bins"].append(self.currIter[idx])
             self.datalog[idx]["costs"].append(self.newCosts[idx])
             self.datalog[idx]["accepted_costs"].append(self.currCosts[idx])
-            if self.datalog[idx]["accepted_costs"][-1] < 1 and self.datalog[idx]["accepted_costs"][-2] >=1:
-                #entered valid solutions
+            if self.datalog[idx]["accepted_costs"][-1] < 1 and self.datalog[idx]["accepted_costs"][-2] >= 1:
+                # entered valid solutions
                 self.datalog[idx]["isvalid"] = self.currIter[idx]
-            if self.datalog[idx]["accepted_costs"][-1] < self.toll and self.datalog[idx]["accepted_costs"][-2] >=self.toll:
+            if (
+                self.datalog[idx]["accepted_costs"][-1] < self.toll
+                and self.datalog[idx]["accepted_costs"][-2] >= self.toll
+            ):
                 # save iteration when toll is reached
                 self.datalog[idx]["istoll"] = self.currIter[idx]
             if self.datalog[idx]["accepted_costs"][-1] < self.datalog[idx]["accepted_costs"][-2]:
@@ -226,9 +281,11 @@ class Optimizer:
                 self.datalog[idx]["ismin"] = self.currIter[idx]
 
             if self.wandbLog:
-                #self.wandbrun.log({f"cost_instance_{idx}": self.newCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
-                self.wandbrun.log({f"accepted_cost_instance_{idx}": self.currCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
-                                    
+                # self.wandbrun.log({f"cost_instance_{idx}": self.newCosts[idx], f"iter_instance_{idx}": self.currIter[idx]})
+                self.wandbrun.log(
+                    {f"accepted_cost_instance_{idx}": self.currCosts[idx], f"iter_instance_{idx}": self.currIter[idx]}
+                )
+
         return idx, self.solutions[idx], self.currCosts[idx], self.currIter[idx], self.datalog[idx]
 
     def run(self, pbar=None):
@@ -237,7 +294,9 @@ class Optimizer:
                 self.runTask(i, pbar)
         else:
             with mp.Pool(self.numWorkers) as pool:
-                for idx, sol, cost, iter, datalog in pool.imap_unordered(self.runTask, [(i) for i in range(self.numInstances)]):
+                for idx, sol, cost, iter, datalog in pool.imap_unordered(
+                    self.runTask, [(i) for i in range(self.numInstances)]
+                ):
                     self.solutions[idx] = sol
                     self.currCosts[idx] = cost
                     self.currIter[idx] = iter
@@ -246,30 +305,42 @@ class Optimizer:
                         pbar()
 
         for idx in range(self.numInstances):
-            self.datalog[idx]["bins"] = self.datalog[idx]["bins"] + list(range(self.datalog[idx]["bins"][-1]+1, self.maxIter+1))
-            self.datalog[idx]["accepted_costs"] = self.datalog[idx]["accepted_costs"] + [self.datalog[idx]["accepted_costs"][-1]] * (self.maxIter-self.currIter[idx])
-            self.datalog[idx]["costs"] = self.datalog[idx]["costs"] + [self.datalog[idx]["costs"][-1]] * (self.maxIter-self.currIter[idx])
+            self.datalog[idx]["bins"] = self.datalog[idx]["bins"] + list(
+                range(self.datalog[idx]["bins"][-1] + 1, self.maxIter + 1)
+            )
+            self.datalog[idx]["accepted_costs"] = self.datalog[idx]["accepted_costs"] + [
+                self.datalog[idx]["accepted_costs"][-1]
+            ] * (self.maxIter - self.currIter[idx])
+            self.datalog[idx]["costs"] = self.datalog[idx]["costs"] + [self.datalog[idx]["costs"][-1]] * (
+                self.maxIter - self.currIter[idx]
+            )
 
-        self.datalog[0]["mean"] = [np.mean([self.datalog[idx]["accepted_costs"][i] for idx in range(self.numInstances)]) for i in range(self.maxIter+1)]
+        self.datalog[0]["mean"] = np.mean(
+            np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0
+        )
 
         self.bestSolution = self.solutions[np.argmin(self.currCosts)]
         self.bestCost = min(self.currCosts)
         if self.wandbLog:
             """
             self.wandbrun.log({"datalog_cost" : wandb.plot.line_series(
-                        xs=self.datalog[0]["bins"], 
+                        xs=self.datalog[0]["bins"],
                         ys=[self.datalog[idx]["costs"] for idx in range(self.numInstances)],
                         keys=[f"cost_{idx}" for idx in range(self.numInstances)],
                         title="Costs",
                         xname="Iterations")})
             """
-            self.wandbrun.log({"datalog_accepted_cost" : wandb.plot.line_series(
-                        xs=self.datalog[0]["bins"], 
+            self.wandbrun.log(
+                {
+                    "datalog_accepted_cost": wandb.plot.line_series(
+                        xs=self.datalog[0]["bins"],
                         ys=[self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)],
                         keys=[f"cost_{idx}" for idx in range(self.numInstances)],
                         title="Accepted Costs",
-                        xname="Iterations")})
-
+                        xname="Iterations",
+                    )
+                }
+            )
 
 
 class SimulatedAnnealing(Optimizer):
@@ -281,6 +352,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
+        extra_ps="random",
         wandblogging=False,
         iterationPerTemp=100,
         initialTemp=0.1,
@@ -288,8 +360,13 @@ class SimulatedAnnealing(Optimizer):
         tempReduction="geometric",
         alpha=0.5,
         beta=5,
+        dur_radius=200, 
+        dln_radius=200, 
+        priority_prob=0,
+        free_tasks_switches=1,
+        no_upper_lim=True,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging)
 
         self.currTemps = [initialTemp] * self.numInstances
         self.finalTemp = finalTemp
@@ -302,6 +379,12 @@ class SimulatedAnnealing(Optimizer):
             "geometric": self.geometricTempReduction,  # t = t * a
             "slowDecrease": self.slowDecreaseTempReduction,  # t = t / 1 + Bt
         }[tempReduction]
+
+        self.dur_radius=dur_radius 
+        self.dln_radius=dln_radius
+        self.priority_prob=priority_prob
+        self.free_tasks_switches = free_tasks_switches
+        self.no_upper_lim = no_upper_lim
 
     def linearTempReduction(self, idx):
         self.currTemps[idx] -= self.alpha
@@ -320,15 +403,16 @@ class SimulatedAnnealing(Optimizer):
             metropolis = [np.exp(-d / t) for t in temperatures]
             # plot iterations vs metropolis
             label = "diff=%.3f" % d
-            plt.plot(iterations, metropolis, marker="x", label=label)
+            plt.plot([i*self.currIterationPerTemp for i in iterations], metropolis, marker="x", label=label)
         # inalize plot
         plt.xlabel("Iteration")
-        plt.ylabel("Metropolis Criterion")
+        plt.ylabel("Acceptance probability")
+        plt.title("Metropolis Criterion")
         # plt.ylim((0.0001, 1))
         # plt.yscale("log")
         plt.grid()
         plt.legend()
-        plt.show()
+        return plt
 
     def accept(self, idx=0):
         cond = super().accept(idx)
@@ -337,8 +421,45 @@ class SimulatedAnnealing(Optimizer):
             return cond or random.random() < math.exp(-(self.newCosts[idx] - self.currCosts[idx]) / self.currTemps[idx])
         return cond or False
 
+    def switchTasks(self, solution):
+        for __ in range(self.free_tasks_switches):
+            # choose a ps from where to the the task
+            ps_from = random.randint(0, len(solution) - 1)
+
+            # list of possible tasks
+            switchable_tasks = [idx for idx, task in enumerate(solution[ps_from].tasks) if task.separation == 0]
+
+            if len(switchable_tasks) > 0:
+                # choose a destination ps (If it is a new one, make a new PS)
+                ps_to = random.randint(0, len(solution) if self.no_upper_lim else len(solution)-1)
+                if ps_to >= len(solution):
+                    new_ps = PollingServer(
+                        f"PS E{ps_to}",
+                        solution[ps_from].duration,
+                        solution[ps_from].period,
+                        solution[ps_from].deadline,
+                        tasks=[],
+                        separation=0,
+                    )
+                    solution.append(new_ps)
+
+                # choose a task and do the switch
+                solution[ps_to].tasks.append(solution[ps_from].tasks.pop(random.choice(switchable_tasks)))
+
+                # if the from_ps is now empty then remove it
+                if len(solution[ps_from].tasks) == 0:
+                    solution.pop(ps_from)
+        return solution
+
+    def switchPriorities(self, solution):
+        for ps in solution:
+            for task in ps.tasks:
+                if random.random() < self.priority_prob:
+                    task.priority = self.clamp(task.priority+random.randint(-1, 1), 0, 6)
+
     def getNewSolution(self, idx):
         new_center = []
+
         for ps in self.solutions[idx]:
             new_period = self.period_divisors[
                 self.clamp(
@@ -347,18 +468,31 @@ class SimulatedAnnealing(Optimizer):
                     len(self.period_divisors) - 1,
                 )
             ]
-            new_duration = self.clamp(ps.duration + random.randint(-10, 10) * 10, 1, new_period)
-            new_deadline = self.clamp(ps.deadline + random.randint(-10, 10) * 10, new_duration, new_period)
+
+            duration = self.clamp(ps.duration, 1, new_period)
+            dur_low, dur_up = max(1, duration - self.dur_radius), min(new_period, duration + self.dur_radius)
+            new_duration = random.randint(dur_low, dur_up)
+
+            deadline = self.clamp(ps.deadline, new_duration, new_period)
+            dln_low, dln_up = max(new_duration, deadline - self.dln_radius), min(new_period, deadline + self.dln_radius)
+            new_deadline = random.randint(dln_low, dln_up)
+
             new_center.append(
                 PollingServer(
                     ps.name,
                     new_duration,
                     new_period,
                     new_deadline,
-                    ps.tasks,
+                    ps.tasks.copy(),
                     ps.separation,
                 )
             )
+
+        # switch ET tasks with sep = 0
+        new_center = self.switchTasks(new_center)
+
+        self.switchPriorities(new_center)
+
         self.newSolutions[idx] = new_center
         self.newCosts[idx] = self.computeCosts([new_center])[0]
 
@@ -384,7 +518,9 @@ class GeneticAlgorithm(Optimizer):
         p_mut=0.1,
         selection='topn'
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, wandblogging)
+        super().__init__(
+            TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps=0, wandblogging=wandblogging
+        )
 
         self.popSize = pop_size
         self.numParents = num_parents
@@ -398,7 +534,7 @@ class GeneticAlgorithm(Optimizer):
     def initialPopulations(self):
         pop = []
         for __ in range(self.numInstances):
-            pop.append(self.initializeSolutions(self.popSize))
+            pop.append(self.initializeSolutions(self.popSize, num_extra_ps=0))
         return pop
 
     def paramsToList(self, solution):
@@ -418,11 +554,23 @@ class GeneticAlgorithm(Optimizer):
                     params[i],
                     params[i + 1],
                     params[i + 2],
-                    solution_old[i // 3].tasks,
+                    solution_old[i // 3].tasks.copy(),
                     solution_old[i // 3].separation,
                 )
             )
         return solution
+
+    def tasksCrossover(self, sol1, sol2, cross_percentage):
+        for ps1, ps2 in zip(sol1, sol2):
+            sol1_tasks = [task for task in ps1.tasks.copy() if task.separation == 0]
+            sol2_tasks = [task for task in ps2.tasks.copy() if task.separation == 0]
+            num_tasks_from_1 = round(cross_percentage * len(sol1_tasks))
+            num_tasks_from_2 = round(cross_percentage * len(sol2_tasks))
+            sol1_new_tasks = sol1_tasks[:num_tasks_from_1] + sol2_tasks[num_tasks_from_2:]
+            sol2_new_tasks = sol1_tasks[num_tasks_from_1:] + sol2_tasks[:num_tasks_from_2]
+            ps1.tasks = [task for task in ps1.tasks.copy() if task.separation != 0] + sol1_new_tasks
+            ps2.tasks = [task for task in ps2.tasks.copy() if task.separation != 0] + sol2_new_tasks
+        return sol1, sol2
 
     def crossover(self, p1, p2):
         # crossover two parents to create two children
@@ -431,12 +579,15 @@ class GeneticAlgorithm(Optimizer):
 
         p1_list, p2_list = self.paramsToList(p1), self.paramsToList(p2)
 
-        pt = random.randint(1, len(p1_list))
+        pt = random.randint(1, len(p1_list) - 1)
         # perform crossover
         c1 = p1_list[:pt] + p2_list[pt:]
         c2 = p2_list[:pt] + p1_list[pt:]
 
         c1, c2 = self.paramsFromList(c1, p1), self.paramsFromList(c2, p2)
+
+        # switch tasks with separation 0
+        c1, c2 = self.tasksCrossover(c1, c2, pt / len(p1_list))
 
         return c1, c2
 
@@ -500,12 +651,14 @@ class GeneticAlgorithm(Optimizer):
         random.shuffle(parent_list)
 
         for p1, p2 in parent_list[: self.popSize // 2]:
-            # crossover and mutation
-            for c in self.crossover(p1, p2):
-                # mutation
-                self.mutation(c)
-                # store for next generation
-                children.append(c)
+            # crossover
+            c1, c2 = self.crossover(p1, p2)
+            # mutation
+            c1, c2 = self.mutation(c1), self.mutation(c2)
+            # store for next generation
+            children.append(c1)
+            children.append(c2)
+
         # replace population
         self.populations[idx] = children
         self.scores[idx] = self.computeCosts(children)
