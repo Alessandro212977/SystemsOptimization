@@ -34,6 +34,11 @@ class TestEDF(unittest.TestCase):
         TT, ET = self.load("EDF_test_5.csv")
         __, __, wcrt, __ = EDF(TT)
         self.assertListEqual(wcrt, [35, 4, 8, 48, 30])
+    
+    def test_EDF6(self):
+        TT, ET = self.load("EDF_test_6.csv")
+        __, __, wcrt, penalty = EDF(TT)
+        self.assertListEqual(wcrt+[penalty], [50, 80, 1/8])
 
 
 class TestEDP(unittest.TestCase):
@@ -54,7 +59,7 @@ class TestEDP(unittest.TestCase):
         schedulable, _, _ = EDP(ps)
         self.assertTrue(schedulable)
 
-
+"""
 class TestExtension1(unittest.TestCase):
     def load(self, name, path="./test/test_taskset/"):
         dl = dataloader.DataLoader(path + name)
@@ -83,7 +88,7 @@ class TestExtension1(unittest.TestCase):
         TT, ET = self.load("Extension1_5.csv")
         ps = PollingServer(name="ps1", duration=100, period=1000, deadline=1000, tasks=ET, separation=1)
         self.assertTrue(extention1(TT + [ps]))
-
+"""
 
 if __name__ == "__main__":
     unittest.main()

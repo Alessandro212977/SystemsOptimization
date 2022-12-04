@@ -20,7 +20,7 @@ def EDF(tasks):
         for i, task in enumerate(tasks):
             if durations[i] > 0 and deadlines[i] <= t:
                 wcrt[i] = max(wcrt[i], T - releases[i])
-                penalty[i] = max(penalty[i], T - releases[i])
+                penalty[i] = max(penalty[i], T - releases[i] - deadlines[i])
                 schedulable = False
             if t % task.period == 0:
                 releases[i] = t
