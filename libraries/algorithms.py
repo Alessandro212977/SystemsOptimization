@@ -33,8 +33,8 @@ def EDF(tasks):
             timetable[t] = ed_idx
             durations[ed_idx] -= 1
             if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
-                if t-releases[ed_idx] >= wcrt[ed_idx]:
-                    wcrt[ed_idx] = t-releases[ed_idx]+1
+                if t - releases[ed_idx] >= wcrt[ed_idx]:
+                    wcrt[ed_idx] = t - releases[ed_idx] + 1
         t += 1
 
     if any(v > 0 for v in durations):
@@ -54,7 +54,7 @@ def EDP(ps: PollingServer):
     WCRT = [T] * len(ps.tasks)
     schedulable = True
 
-    penalty = [0]*len(ps.tasks)
+    penalty = [0] * len(ps.tasks)
 
     for i, ETtask1 in enumerate(ps.tasks):
         t = 0

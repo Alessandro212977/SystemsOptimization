@@ -62,7 +62,11 @@ def experiment(data_path, profiling=False):
         optim.plotTemperature().show()
         quit()
 
-    bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
+    bar_iter = (
+        optim.maxIter * optim.numInstances
+        if optim.numWorkers == 1
+        else optim.numInstances
+    )
 
     if profiling:
         import cProfile
@@ -70,13 +74,19 @@ def experiment(data_path, profiling=False):
 
         with cProfile.Profile() as pr:
             with tqdm(
-                total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}"
+                total=bar_iter,
+                desc="Progress",
+                bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}",
             ) as bar:  # progress bar
                 optim.run(bar.update)
         pr = pstats.Stats(pr)
         pr.sort_stats("cumulative").print_stats(10)
     else:
-        with tqdm(total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}") as bar:
+        with tqdm(
+            total=bar_iter,
+            desc="Progress",
+            bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}",
+        ) as bar:
             optim.run(bar.update)
 
     optim.printSolution()
@@ -103,19 +113,28 @@ def experiment(data_path, profiling=False):
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.png")
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.eps")
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
-        timetable_plot = getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True)
-        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.png")
-        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.eps")
+        timetable_plot = getTimetablePlot(
+            TT + optim.bestSolution, timetable, group_tt=True
+        )
+        timetable_plot.savefig(
+            config.log_directory + config.log_name + "/timetable_plot.png"
+        )
+        timetable_plot.savefig(
+            config.log_directory + config.log_name + "/timetable_plot.eps"
+        )
 
         with open(config.log_directory + config.log_name + "/log.txt", "w") as logfile:
-            logfile.write("Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"]))
+            logfile.write(
+                "Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"])
+            )
             logfile.write(f"Taskset: {config.test_case_path}\n\n")
             logfile.write(f"Algorithm: {optim.__class__.__name__}\n")
             logfile.write("Parameters:\n")
 
-            for key, val in {"SimulatedAnnealing": config.SA, "GeneticAlgorithm": config.GA}[
-                optim.__class__.__name__
-            ].items():
+            for key, val in {
+                "SimulatedAnnealing": config.SA,
+                "GeneticAlgorithm": config.GA,
+            }[optim.__class__.__name__].items():
                 logfile.write(f"    {key}: {val}\n")
             logfile.write("\n" + optim.printSolution(get=True))
 
