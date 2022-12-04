@@ -1,8 +1,0 @@
-tasks;name;duration;period;type;priority;deadline;seperation
-;tTT0;5;4000;TT;7;4000;0
-;tTT1;4;2000;TT;7;2000;0
-;tTT2;4;3000;TT;7;3000;0
-;tTT3;13;4000;TT;7;4000;0
-;tTT4;22;3000;TT;7;3000;0
-
-
