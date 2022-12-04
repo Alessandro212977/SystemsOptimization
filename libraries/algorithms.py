@@ -33,7 +33,7 @@ def EDF(tasks):
             durations[ed_idx] -= 1
             if durations[ed_idx] == 0 and deadlines[ed_idx] >= t:
                 if t-releases[ed_idx] >= wcrt[ed_idx]:
-                    wcrt[ed_idx] = t-releases[ed_idx]
+                    wcrt[ed_idx] = t-releases[ed_idx]+1
         t += 1
 
     if any(v > 0 for v in durations):

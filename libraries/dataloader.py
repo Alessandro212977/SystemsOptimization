@@ -1,6 +1,6 @@
 import pandas as pd
 from libraries.tasks import TT, ET
-
+from pathlib import Path
 
 class DataLoader:
     def __init__(self, path) -> None:
@@ -16,6 +16,23 @@ class DataLoader:
                 TTtasks.append(TT(row["name"], row["duration"], row["period"], row["deadline"]))
             else:
                 ETtasks.append(ET(row["name"], row["duration"], row["period"], row["deadline"], row["priority"], row["separation"]))
+
+        return TTtasks, ETtasks
+
+
+    def loadAllFiles(self):
+        TTtasks = []
+        ETtasks = []
+        files = Path('./test_cases/').glob('*.csv')
+        for file in files:
+            data = pd.read_csv(file, sep=";")
+            data.rename(columns = {'seperation':'separation'}, inplace = True)
+
+            for __, row in data.iterrows():
+                if row["type"] == "TT":
+                    TTtasks.append(TT(row["name"], row["duration"], row["period"], row["deadline"]))              
+                else:
+                    ETtasks.append(ET(row["name"], row["duration"], row["period"], row["deadline"], row["priority"], row["separation"]))
 
         return TTtasks, ETtasks
 
