@@ -54,7 +54,7 @@ def EDP(ps: PollingServer):
     WCRT = [T] * len(ps.tasks)
     schedulable = True
 
-    penalty = 0
+    penalty = [0]*len(ps.tasks)
 
     for i, ETtask1 in enumerate(ps.tasks):
         t = 0
@@ -71,10 +71,9 @@ def EDP(ps: PollingServer):
             t += 1
 
         if WCRT[i] > ETtask1.deadline:
-            penalty += WCRT[i] - ETtask1.deadline
+            penalty[i] = WCRT[i] - ETtask1.deadline
             schedulable = False
-
-    return schedulable, WCRT, penalty / T
+    return schedulable, WCRT, sum(penalty) / (T * len(ps.tasks))
 
 
 def extention1(tasks):

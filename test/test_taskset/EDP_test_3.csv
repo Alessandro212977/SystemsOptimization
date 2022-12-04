@@ -1,0 +1,5 @@
+tasks;name;duration;period;type;priority;deadline;seperation
+;tET0;50;100;ET;1;100;1
+;tET2;50;100;ET;1;80;1
+
+

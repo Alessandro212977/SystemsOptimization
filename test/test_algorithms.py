@@ -49,15 +49,21 @@ class TestEDP(unittest.TestCase):
     def test_EDP1(self):
         TT, ET = self.load("EDP_test_1.csv")
         ps = PollingServer(name="ps1", duration=100, period=1000, deadline=1000, tasks=ET, separation=1)
-        schedulable, _, _ = EDP(ps)
+        schedulable, __, __ = EDP(ps)
         # print("EDP\n", EDP(ps))
         self.assertTrue(schedulable)
 
     def test_EDP2(self):
         TT, ET = self.load("EDP_test_2.csv")
         ps = PollingServer(name="ps1", duration=100, period=1000, deadline=1000, tasks=ET, separation=1)
-        schedulable, _, _ = EDP(ps)
+        schedulable, __, __ = EDP(ps)
         self.assertTrue(schedulable)
+
+    def test_EDP3(self):
+        TT, ET = self.load("EDP_test_3.csv")
+        ps = PollingServer(name="ps1", duration=1000, period=1000, deadline=1000, tasks=ET, separation=1)
+        __, wcrt, penalty = EDP(ps)
+        self.assertListEqual(wcrt+[penalty], [100, 100, 1/10])
 
 """
 class TestExtension1(unittest.TestCase):
