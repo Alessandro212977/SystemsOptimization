@@ -78,17 +78,10 @@ def EDP(ps: PollingServer):
 
 def extention1(tasks):
     T = lcm(*[obj.period for obj in tasks])
-    ## Di = relative deadline
-    deadlines = [obj.deadline for obj in tasks]  # deadlines
-    ## Ci = worst case excetion time
-    __, __, wcrt, __ = EDF(tasks)
-    ## Ti = period
-    periods = [obj.period for obj in tasks]  # periods
-    sum = 0
-    for t in range(0, T):
-        for i in range(0, len(deadlines)):
-            sum += floor(((t + periods[i] - deadlines[i]) / periods[i])) * wcrt[i]
-        if t > sum:
+    
+    for t in range(1, T):
+        result = sum([(floor((t - task.deadline) / task.period) + 1) * task.duration for task in tasks])
+        if t < result:
             return False
     return True
 

@@ -66,7 +66,6 @@ class TestEDP(unittest.TestCase):
         self.assertListEqual(wcrt + [penalty], [100, 100, 1 / 10])
 
 
-"""
 class TestExtension1(unittest.TestCase):
     def load(self, name, path="./test/test_taskset/"):
         dl = dataloader.DataLoader(path + name)
@@ -75,27 +74,32 @@ class TestExtension1(unittest.TestCase):
     def test_ex1_1(self):
         TT, ET = self.load("Extension1_1.csv")
         # print(extention1(TT))
-        self.assertTrue(extention1(TT))
+        schedulable, __, __, __ = EDF(TT)
+        self.assertEqual(extention1(TT), schedulable)
 
     def test_ex1_2(self):
         TT, ET = self.load("Extension1_2.csv")
         # print(extention1(TT))
-        self.assertTrue(extention1(TT))
+        schedulable, __, __, __ = EDF(TT)
+        self.assertEqual(extention1(TT), schedulable)
 
     def test_ex1_3(self):
         TT, ET = self.load("Extension1_3.csv")
-        self.assertTrue(extention1(TT))    
+        schedulable, __, __, __ = EDF(TT)
+        self.assertEqual(extention1(TT), schedulable)   
 
     def test_ex1_4(self):
         TT, ET = self.load("Extension1_4.csv")
         ps = PollingServer(name="ps1", duration=1000, period=5000, deadline=2000, tasks=ET, separation=1)
-        self.assertTrue(extention1(TT + [ps]))
+        schedulable, __, __, __ = EDF(TT + [ps])
+        self.assertEqual(extention1(TT + [ps]), schedulable)
 
     def test_ex1_5(self):
         TT, ET = self.load("Extension1_5.csv")
         ps = PollingServer(name="ps1", duration=100, period=1000, deadline=1000, tasks=ET, separation=1)
-        self.assertTrue(extention1(TT + [ps]))
-"""
+        schedulable, __, __, __ = EDF(TT + [ps])
+        self.assertEqual(extention1(TT + [ps]), schedulable)
+
 
 if __name__ == "__main__":
     unittest.main()
