@@ -591,7 +591,7 @@ class GeneticAlgorithm(Optimizer):
 
     def crossover(self, p1, p2):
         # crossover two parents to create two children
-        if random.random() < self.pCross:
+        if random.random() > self.pCross:
             return p1, p2
 
         pt = random.randint(1, len(p1) - 1)
@@ -622,31 +622,36 @@ class GeneticAlgorithm(Optimizer):
 
     def mutation(self, solution):
         # mutation operator
-        if random.random() < self.pMut:
+        if random.random() > self.pMut:
             return solution
 
-        s_list = self.paramsToList(solution)
-        gene = random.randint(0, len(s_list) - 1)
-
-        if gene % 3 == 0:  # its duration:
-            # print("duration", gene, gene%3, s_list)
-            s_list[gene] = self.clamp(s_list[gene] + random.randint(-10, 10) * 10, 1, s_list[gene + 1])
-        elif gene % 3 == 1:  # its period
-            s_list[gene] = self.period_divisors[
-                self.clamp(
-                    self.period_divisors.index(s_list[gene]) + random.choice([-1, 0, 1]),
-                    0,
-                    len(self.period_divisors) - 1,
-                )
-            ]
-        else:  # is deadline
-            s_list[gene] = self.clamp(
-                s_list[gene] + random.randint(-10, 10) * 10,
-                s_list[gene - 2],
-                s_list[gene - 1],
+        new_solution = solution.copy()
+        ps_idx = random.randint(0, len(solution) - 1)
+        ps =  new_solution[ps_idx]
+        new_period = self.period_divisors[
+            self.clamp(
+                self.period_divisors.index(ps.period) + random.choice([-1, 0, 1]),
+                0,
+                len(self.period_divisors) - 1,
             )
+        ]
 
-        new_solution = self.paramsFromList(s_list, solution)
+        duration = self.clamp(ps.duration, 1, new_period)
+        dur_low, dur_up = max(1, duration - 200), min(new_period, duration + 200)
+        new_duration = random.randint(dur_low, dur_up)
+
+        deadline = self.clamp(ps.deadline, new_duration, new_period)
+        dln_low, dln_up = max(new_duration, deadline - 200), min(new_period, deadline + 200)
+        new_deadline = random.randint(dln_low, dln_up)
+
+        new_solution[ps_idx] = PollingServer(
+                ps.name,
+                new_duration,
+                new_period,
+                new_deadline,
+                ps.tasks.copy(),
+                ps.separation,
+            )
 
         # switch tasks with separation 0
         new_solution = self.tasksMutation(new_solution)
