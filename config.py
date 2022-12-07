@@ -22,7 +22,7 @@ log_name = "test"
 SA = dict(
     numinstances=1,
     numworkers=1,
-    maxiter=200,
+    maxiter=1000,
     toll=0.01,
     convergence=0.1,
     extra_ps=0,  # "random",
@@ -42,14 +42,14 @@ SA = dict(
 )
 
 GA = dict(
-    numinstances=4,
-    numworkers=4,
+    numinstances=3,
+    numworkers=3,
     maxiter=10,
     toll=0.01,
     convergence=0.1,
     wandblogging=False,
-    pop_size=64,
-    num_parents=16,
+    pop_size=16,
+    num_parents=4,
     p_cross=0.8,
     p_mut=0.1,
     selection="tournament",

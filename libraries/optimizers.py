@@ -116,7 +116,7 @@ class Optimizer:
                 )
             """
             ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost")
-            ax.axhline(self.convergence, linewidth=1, color="red", label="is_converged")
+            ax.axhline(self.convergence, linewidth=1, color="red", label="threshold")
             if self.numInstances > 1:
                 low = self.datalog[0]["mean"] + self.datalog[0]["std"]
                 up = np.maximum(
@@ -551,10 +551,20 @@ class GeneticAlgorithm(Optimizer):
         self.scores = [self.computeCosts(self.populations[idx]) for idx in range(self.numInstances)]
 
     def initialPopulations(self):
+        def func(args):
+            return self.initializeSolutions(self.popSize, num_extra_ps=0)
+
         pop = []
-        for __ in range(self.numInstances):
-            pop.append(self.initializeSolutions(self.popSize, num_extra_ps=0))
-        return pop
+        if self.numWorkers == 1:
+            for __ in range(self.numInstances):
+                pop.append(self.initializeSolutions(self.popSize, num_extra_ps=0))
+            return pop
+        else:
+            with mp.Pool(self.numWorkers) as pool:
+                for single_pop in pool.imap_unordered(func, [idx for idx in range(self.numInstances)]):
+                    pop.append(single_pop)
+            return pop
+
 
     def paramsToList(self, solution):
         params = []
@@ -584,34 +594,31 @@ class GeneticAlgorithm(Optimizer):
         if random.random() < self.pCross:
             return p1, p2
 
-        p1_list, p2_list = self.paramsToList(p1), self.paramsToList(p2)
-
-        pt = random.randint(1, len(p1_list) - 1)
-        # perform crossover
-        c1 = p1_list[:pt] + p2_list[pt:]
-        c2 = p2_list[:pt] + p1_list[pt:]
-
-        c1, c2 = self.paramsFromList(c1, p1), self.paramsFromList(c2, p2)
-
+        pt = random.randint(1, len(p1) - 1)
+        c1, c2 = p1.copy(), p2.copy()
+        for i, (ps1, ps2) in enumerate(zip(p1, p2)):
+            if i<pt:
+                c1[i].duration = ps2.duration
+                c1[i].period = ps2.period
+                c1[i].deadline = ps2.deadline
+                c2[i].duration = ps1.duration
+                c2[i].period = ps1.period
+                c2[i].deadline = ps1.deadline
         return c1, c2
 
     def tasksMutation(self, solution):
         for __ in range(self.free_tasks_switches):
             # choose a ps from where to the the task
             ps_from = random.randint(0, len(solution) - 1)
-
             # list of possible tasks
             switchable_tasks = [idx for idx, task in enumerate(solution[ps_from].tasks) if task.separation == 0]
 
             if len(switchable_tasks) > 0:
                 # choose a destination ps (If it is a new one, make a new PS)
                 ps_to = random.randint(0, len(solution) - 1)
-                
                 # choose a task and do the switch
                 solution[ps_to].tasks.append(solution[ps_from].tasks.pop(random.choice(switchable_tasks)))
-
         return solution
-
 
     def mutation(self, solution):
         # mutation operator

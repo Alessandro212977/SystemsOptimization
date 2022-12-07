@@ -106,11 +106,11 @@ def experiment(data_path, profiling=False):
 
         cost_plt = optim.plotCost(instance_idx="all")
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.png")
-        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.eps")
+        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.pdf")
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
         timetable_plot = getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True)
         timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.png")
-        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.eps")
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.pdf")
 
         with open(config.log_directory + config.log_name + "/log.txt", "w") as logfile:
             logfile.write("Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"]))
