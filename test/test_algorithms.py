@@ -86,7 +86,7 @@ class TestExtension1(unittest.TestCase):
     def test_ex1_3(self):
         TT, ET = self.load("Extension1_3.csv")
         schedulable, __, __, __ = EDF(TT)
-        self.assertEqual(extention1(TT), schedulable)   
+        self.assertEqual(extention1(TT), schedulable)
 
     def test_ex1_4(self):
         TT, ET = self.load("Extension1_4.csv")
