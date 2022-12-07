@@ -550,6 +550,14 @@ class GeneticAlgorithm(Optimizer):
         self.populations = self.initialPopulations()
         self.scores = [self.computeCosts(self.populations[idx]) for idx in range(self.numInstances)]
 
+        for idx in range(self.numInstances):
+            best = np.argmin(self.scores[idx])
+            self.solutions[idx] = self.populations[idx][best]
+            self.currCosts[idx] = self.scores[idx][best]
+
+        self.bestSolution = self.solutions[0]  # global
+        self.bestCost = self.currCosts[0]  # global
+
     def initialPopulations(self):
         def func(args):
             return self.initializeSolutions(self.popSize, num_extra_ps=0)
@@ -564,30 +572,6 @@ class GeneticAlgorithm(Optimizer):
                 for single_pop in pool.imap_unordered(func, [idx for idx in range(self.numInstances)]):
                     pop.append(single_pop)
             return pop
-
-
-    def paramsToList(self, solution):
-        params = []
-        for ps in solution:
-            params.append(ps.duration)
-            params.append(ps.period)
-            params.append(ps.deadline)
-        return params
-
-    def paramsFromList(self, params, solution_old):
-        solution = []
-        for i in range(0, len(params), 3):
-            solution.append(
-                PollingServer(
-                    solution_old[i // 3].name,
-                    params[i],
-                    params[i + 1],
-                    params[i + 2],
-                    solution_old[i // 3].tasks.copy(),
-                    solution_old[i // 3].separation,
-                )
-            )
-        return solution
 
     def crossover(self, p1, p2):
         # crossover two parents to create two children
@@ -617,8 +601,9 @@ class GeneticAlgorithm(Optimizer):
                 # choose a destination ps (If it is a new one, make a new PS)
                 ps_to = random.randint(0, len(solution) - 1)
                 # choose a task and do the switch
-                solution[ps_to].tasks.append(solution[ps_from].tasks.pop(random.choice(switchable_tasks)))
-        return solution
+                choosed = solution[ps_from].tasks.pop(random.choice(switchable_tasks))
+                solution[ps_to].tasks.append(choosed)
+        return solution.copy()
 
     def mutation(self, solution):
         # mutation operator
