@@ -13,7 +13,7 @@ profiling = False
 
 algorithm = "GA"
 
-show_plot = False
+show_plot = True
 
 write_log = True
 log_directory = "./results/"
@@ -42,15 +42,16 @@ SA = dict(
 )
 
 GA = dict(
-    numinstances=1,
-    numworkers=1,
+    numinstances=4,
+    numworkers=4,
     maxiter=10,
     toll=0.01,
     convergence=0.1,
     wandblogging=False,
-    pop_size=16,
-    num_parents=4,
+    pop_size=64,
+    num_parents=16,
     p_cross=0.8,
     p_mut=0.1,
-    selection="rank",
+    selection="tournament",
+    free_tasks_switches=1,
 )

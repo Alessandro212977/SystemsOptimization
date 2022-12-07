@@ -4,44 +4,46 @@ Taskset: ./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_
 
 Algorithm: GeneticAlgorithm
 Parameters:
-    numinstances: 1
-    numworkers: 1
+    numinstances: 4
+    numworkers: 4
     maxiter: 10
     toll: 0.01
     convergence: 0.1
     wandblogging: False
-    pop_size: 16
-    num_parents: 4
+    pop_size: 64
+    num_parents: 16
     p_cross: 0.8
     p_mut: 0.1
     selection: tournament
+    free_tasks_switches: 1
 
 -------------------------- Solution --------------------------
-PS 1: dur: 90, prd: 400, dln: 350, sep: 1
+PS 1: dur: 3, prd: 6, dln: 3, sep: 1
     tasks:	sep	pri
     tET12:	1	0
     tET3:	1	2
-    tET9:	0	6
-    tET18:	0	6
-    tET11:	0	2
-    tET7:	0	2
-    tET8:	0	3
-    tET18:	0	6
-    tET9:	0	6
-PS 2: dur: 3, prd: 12, dln: 5, sep: 2
-    tasks:	sep	pri
-    tET4:	2	0
-    tET14:	0	5
-    tET10:	0	6
-    tET5:	0	5
-    tET1:	0	5
+    tET15:	0	1
+    tET16:	0	2
+    tET19:	0	2
     tET0:	0	2
+    tET6:	0	2
     tET13:	0	3
+    tET8:	0	3
+    tET2:	0	5
     tET17:	0	5
     tET5:	0	5
     tET1:	0	5
     tET14:	0	5
-Optimal solution cost: 0.03529, valid: True
-Average WCRT for TT+PS task: 329.34 ms (max: 681 ms)
-Average WCRT for ET task: 517.50 ms (max: 1068 ms)
+    tET10:	0	6
+    tET18:	0	6
+    tET9:	0	6
+    tET11:	0	2
+PS 2: dur: 6, prd: 160, dln: 46, sep: 2
+    tasks:	sep	pri
+    tET4:	2	0
+    tET7:	0	2
+Optimal solution cost: 0.02525, valid: True
+Average WCRT for TT+PS task: 295.97 ms (max: 720 ms)
+Average WCRT for ET task: 310.05 ms (max: 941 ms)
+Stats of 4 runs: mean converged (cost<0.1) at iter: 1
 -------------------------------------------------------------

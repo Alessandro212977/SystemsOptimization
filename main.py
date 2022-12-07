@@ -55,6 +55,7 @@ def experiment(data_path, profiling=False):
             p_cross=config.GA["p_cross"],
             p_mut=config.GA["p_mut"],
             selection=config.GA["selection"],
+            free_tasks_switches=config.GA["free_tasks_switches"]
         )
     else:
         print(f"{config.algorithm} not recognized")

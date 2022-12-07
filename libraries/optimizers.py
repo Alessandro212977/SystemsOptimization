@@ -526,6 +526,7 @@ class GeneticAlgorithm(Optimizer):
         p_cross=0.9,
         p_mut=0.1,
         selection="rank",
+        free_tasks_switches=1,
     ):
         super().__init__(
             TTtasks,
@@ -544,6 +545,7 @@ class GeneticAlgorithm(Optimizer):
         self.pCross = p_cross
         self.pMut = p_mut
         self.selectionMode = selection
+        self.free_tasks_switches = free_tasks_switches
 
         self.populations = self.initialPopulations()
         self.scores = [self.computeCosts(self.populations[idx]) for idx in range(self.numInstances)]
@@ -577,21 +579,9 @@ class GeneticAlgorithm(Optimizer):
             )
         return solution
 
-    def tasksCrossover(self, sol1, sol2, cross_percentage):
-        for ps1, ps2 in zip(sol1, sol2):
-            sol1_tasks = [task for task in ps1.tasks.copy() if task.separation == 0]
-            sol2_tasks = [task for task in ps2.tasks.copy() if task.separation == 0]
-            num_tasks_from_1 = round(cross_percentage * len(sol1_tasks))
-            num_tasks_from_2 = round(cross_percentage * len(sol2_tasks))
-            sol1_new_tasks = sol1_tasks[:num_tasks_from_1] + sol2_tasks[num_tasks_from_2:]
-            sol2_new_tasks = sol1_tasks[num_tasks_from_1:] + sol2_tasks[:num_tasks_from_2]
-            ps1.tasks = [task for task in ps1.tasks.copy() if task.separation != 0] + sol1_new_tasks
-            ps2.tasks = [task for task in ps2.tasks.copy() if task.separation != 0] + sol2_new_tasks
-        return sol1, sol2
-
     def crossover(self, p1, p2):
         # crossover two parents to create two children
-        if np.random.rand() > self.pCross:
+        if random.random() < self.pCross:
             return p1, p2
 
         p1_list, p2_list = self.paramsToList(p1), self.paramsToList(p2)
@@ -603,14 +593,29 @@ class GeneticAlgorithm(Optimizer):
 
         c1, c2 = self.paramsFromList(c1, p1), self.paramsFromList(c2, p2)
 
-        # switch tasks with separation 0
-        c1, c2 = self.tasksCrossover(c1, c2, pt / len(p1_list))
-
         return c1, c2
+
+    def tasksMutation(self, solution):
+        for __ in range(self.free_tasks_switches):
+            # choose a ps from where to the the task
+            ps_from = random.randint(0, len(solution) - 1)
+
+            # list of possible tasks
+            switchable_tasks = [idx for idx, task in enumerate(solution[ps_from].tasks) if task.separation == 0]
+
+            if len(switchable_tasks) > 0:
+                # choose a destination ps (If it is a new one, make a new PS)
+                ps_to = random.randint(0, len(solution) - 1)
+                
+                # choose a task and do the switch
+                solution[ps_to].tasks.append(solution[ps_from].tasks.pop(random.choice(switchable_tasks)))
+
+        return solution
+
 
     def mutation(self, solution):
         # mutation operator
-        if np.random.rand() > self.pMut:
+        if random.random() < self.pMut:
             return solution
 
         s_list = self.paramsToList(solution)
@@ -636,13 +641,16 @@ class GeneticAlgorithm(Optimizer):
 
         new_solution = self.paramsFromList(s_list, solution)
 
+        # switch tasks with separation 0
+        new_solution = self.tasksMutation(new_solution)
+
         return new_solution
 
     # random selection
     def selection(self, pop, scores):
         if self.selectionMode == "rank":
             ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
-            return [pop[idx] for idx in ind]
+            return [pop[i] for i in ind]
 
         elif self.selectionMode == "tournament":  # how is it called?
             parents = []
@@ -672,6 +680,7 @@ class GeneticAlgorithm(Optimizer):
             c1, c2 = self.crossover(p1, p2)
             # mutation
             c1, c2 = self.mutation(c1), self.mutation(c2)
+
             # store for next generation
             children.append(c1)
             children.append(c2)
