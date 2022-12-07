@@ -78,7 +78,7 @@ def EDP(ps: PollingServer):
 
 def extention1(tasks):
     T = lcm(*[obj.period for obj in tasks])
-    
+
     for t in range(1, T):
         result = sum([(floor((t - task.deadline) / task.period) + 1) * task.duration for task in tasks])
         if t < result:

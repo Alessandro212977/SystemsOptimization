@@ -24,6 +24,7 @@ def experiment(data_path, profiling=False):
             numworkers=config.SA["numworkers"],
             maxiter=config.SA["maxiter"],
             toll=config.SA["toll"],
+            convergence=config.SA["convergence"],
             extra_ps=config.SA["extra_ps"],
             wandblogging=config.SA["wandblogging"],
             iterationPerTemp=config.SA["iterationPerTemp"],
@@ -47,6 +48,7 @@ def experiment(data_path, profiling=False):
             numworkers=config.GA["numworkers"],
             maxiter=config.GA["maxiter"],
             toll=config.GA["toll"],
+            convergence=config.SA["convergence"],
             wandblogging=config.GA["wandblogging"],
             pop_size=config.GA["pop_size"],
             num_parents=config.GA["num_parents"],
@@ -62,11 +64,7 @@ def experiment(data_path, profiling=False):
         optim.plotTemperature().show()
         quit()
 
-    bar_iter = (
-        optim.maxIter * optim.numInstances
-        if optim.numWorkers == 1
-        else optim.numInstances
-    )
+    bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
 
     if profiling:
         import cProfile
@@ -92,7 +90,6 @@ def experiment(data_path, profiling=False):
     optim.printSolution()
 
     if config.show_plot:
-        optim.plotBars().show()
         optim.plotCost(instance_idx="all").show()
 
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
@@ -106,27 +103,16 @@ def experiment(data_path, profiling=False):
         except FileExistsError:
             print(f"Overwriting {config.log_name} folder")
 
-        bar_plt = optim.plotBars()
-        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.png")
-        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.eps")
         cost_plt = optim.plotCost(instance_idx="all")
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.png")
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.eps")
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
-        timetable_plot = getTimetablePlot(
-            TT + optim.bestSolution, timetable, group_tt=True
-        )
-        timetable_plot.savefig(
-            config.log_directory + config.log_name + "/timetable_plot.png"
-        )
-        timetable_plot.savefig(
-            config.log_directory + config.log_name + "/timetable_plot.eps"
-        )
+        timetable_plot = getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True)
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.png")
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.eps")
 
         with open(config.log_directory + config.log_name + "/log.txt", "w") as logfile:
-            logfile.write(
-                "Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"])
-            )
+            logfile.write("Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"]))
             logfile.write(f"Taskset: {config.test_case_path}\n\n")
             logfile.write(f"Algorithm: {optim.__class__.__name__}\n")
             logfile.write("Parameters:\n")

@@ -24,7 +24,16 @@ logging.getLogger().setLevel(logging.ERROR)  # DEBUG
 
 class Optimizer:
     def __init__(
-        self, TTtasks, ETtasks, numinstances=1, numworkers=1, maxiter=100, toll=0.1, extra_ps=0, wandblogging=False
+        self,
+        TTtasks,
+        ETtasks,
+        numinstances=1,
+        numworkers=1,
+        maxiter=100,
+        toll=0.1,
+        convergence=0.2,
+        extra_ps=0,
+        wandblogging=False,
     ):
         # Tasks
         self.TTtasks = TTtasks
@@ -69,9 +78,11 @@ class Optimizer:
                 "isvalid": 0,
                 "istoll": 0,
                 "ismin": 0,
+                "is_converged": "NaN",
             }
             for idx in range(self.numInstances)
         ]
+        self.convergence = convergence
         self.wandbLog = wandblogging
         if self.wandbLog:
             self.wandbrun = wandb.init(
@@ -93,6 +104,7 @@ class Optimizer:
                 label="Best solution cost",
             )
         elif instance_idx == "all":
+            """
             for instance_idx in range(self.numInstances):
                 ax.plot(
                     self.datalog[instance_idx]["bins"],
@@ -102,42 +114,27 @@ class Optimizer:
                     linestyle="dashed",
                     linewidth=0.7,
                 )
-            ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost", color="red")
+            """
+            ax.plot(self.datalog[0]["bins"], self.datalog[0]["mean"], label=f"Mean cost")
+            ax.axhline(self.convergence, linewidth=1, color="red", label="is_converged")
+            if self.numInstances > 1:
+                low = self.datalog[0]["mean"] + self.datalog[0]["std"]
+                up = np.maximum(
+                    self.datalog[0]["mean"] - self.datalog[0]["std"],
+                    np.zeros_like(self.datalog[0]["mean"] - self.datalog[0]["std"]),
+                )
+                ax.fill_between(
+                    self.datalog[0]["bins"], low, up, facecolor="blue", alpha=0.3, label=r"$\pm \sigma$ interval"
+                )
 
-        ax.axhline(1, linewidth=1, color="green", label="is_valid")
-        ax.axhline(self.toll, linewidth=1, color="#1f77b4", label="is_toll")
-        ax.set_ylim((0, 3))
+        # ax.axhline(1, linewidth=1, color="green", label="is_valid")
+        #
+        ax.set_ylim(bottom=0)
         ax.set_xlim((0, self.maxIter))
         ax.grid()
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Cost")
         ax.set_title("Cost of accepted solutions")
-        ax.legend()
-        return plt
-
-    def plotBars(self):
-        fig, ax = plt.subplots()
-        x = list(range(self.numInstances))
-        h_valid = [self.datalog[idx]["isvalid"] for idx in range(self.numInstances)]
-        h_toll = [self.datalog[idx]["istoll"] for idx in range(self.numInstances)]
-        h_invalid = [0 if self.datalog[idx]["isvalid"] > 0 else self.maxIter for idx in range(self.numInstances)]
-
-        ax.bar(x, h_toll, alpha=0.5, label="is_toll")
-        ax.bar(x, h_valid, alpha=0.5, label="is_valid", color="green")
-        ax.bar(x, h_invalid, alpha=0.5, label="failed", color="red")
-
-        h_toll_mean = np.mean([x for x in h_toll if x > 0])
-        h_valid_mean = np.mean([x for x in h_valid if x > 0])
-
-        ax.axhline(h_toll_mean, linewidth=1, label="is_toll mean")
-        ax.axhline(h_valid_mean, color="green", linewidth=1, label="is_valid mean")
-
-        ax.set_xticks(x)
-
-        ax.grid()
-        ax.set_xlabel("Instances")
-        ax.set_ylabel("Iterations")
-        ax.set_title("validity and optimality of instances")
         ax.legend()
         return plt
 
@@ -206,7 +203,7 @@ class Optimizer:
             # EDF
             tt_schedulable, __, tt_wcrt, tt_penalty = EDF(self.TTtasks + sol)
 
-            cost = 0 if et_schedulable and tt_schedulable else 1 + 0.5 * et_penalty + 0.5 * tt_penalty
+            cost = 0 if et_schedulable and tt_schedulable else 0.5 * et_penalty + 0.5 * tt_penalty
             for w, c in zip(weights, [np.mean(et_wcrt), np.mean(tt_wcrt)]):
                 cost += w * c / self.hyperperiod
             costs.append(cost)
@@ -222,12 +219,16 @@ class Optimizer:
             string += str(ps) + "\n"
             wcrt_et = wcrt_et + EDP(ps)[1]
 
-        string += "Solution cost: {:.5f}, valid: {}\n".format(
+        string += "Optimal solution cost: {:.5f}, valid: {}\n".format(
             self.computeCosts([self.bestSolution])[0],
             self.areValidNeighbors([self.bestSolution])[0],
         )
         string += "Average WCRT for TT+PS task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_tt), max(wcrt_tt))
         string += "Average WCRT for ET task: {:.2f} ms (max: {} ms)\n".format(np.mean(wcrt_et), max(wcrt_et))
+        if self.numInstances > 1:
+            string += "Stats of {} runs: mean converged (cost<{}) at iter: {}\n".format(
+                self.numInstances, self.convergence, self.datalog[0]["is_converged"]
+            )
         string += "-------------------------------------------------------------"
 
         if get:
@@ -317,6 +318,10 @@ class Optimizer:
         self.datalog[0]["mean"] = np.mean(
             np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0
         )
+        std = np.std(np.array([self.datalog[idx]["accepted_costs"] for idx in range(self.numInstances)]), axis=0)
+        self.datalog[0]["std"] = std
+
+        self.datalog[0]["is_converged"] = np.argmax(self.datalog[0]["mean"] < self.convergence)
 
         best_idx = np.argmin(self.currCosts)
         self.bestSolution = self.solutions[best_idx]
@@ -354,6 +359,7 @@ class SimulatedAnnealing(Optimizer):
         numworkers=1,
         maxiter=1000,
         toll=0.01,
+        convergence=0.2,
         extra_ps="random",
         wandblogging=False,
         iterationPerTemp=100,
@@ -368,7 +374,7 @@ class SimulatedAnnealing(Optimizer):
         free_tasks_switches=1,
         no_upper_lim=True,
     ):
-        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps, wandblogging)
+        super().__init__(TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, convergence, extra_ps, wandblogging)
 
         self.currTemps = [initialTemp] * self.numInstances
         self.finalTemp = finalTemp
@@ -513,15 +519,24 @@ class GeneticAlgorithm(Optimizer):
         numworkers=1,
         maxiter=10,
         toll=0.01,
+        convergence=0.2,
         wandblogging=False,
         pop_size=20,
         num_parents=8,
         p_cross=0.9,
         p_mut=0.1,
-        selection="topn",
+        selection="rank",
     ):
         super().__init__(
-            TTtasks, ETtasks, numinstances, numworkers, maxiter, toll, extra_ps=0, wandblogging=wandblogging
+            TTtasks,
+            ETtasks,
+            numinstances,
+            numworkers,
+            maxiter,
+            toll,
+            convergence,
+            extra_ps=0,
+            wandblogging=wandblogging,
         )
 
         self.popSize = pop_size
@@ -625,7 +640,7 @@ class GeneticAlgorithm(Optimizer):
 
     # random selection
     def selection(self, pop, scores):
-        if self.selectionMode == "topn":
+        if self.selectionMode == "rank":
             ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
             return [pop[idx] for idx in ind]
 
