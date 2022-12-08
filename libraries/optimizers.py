@@ -15,6 +15,7 @@ import libraries.dataloader as dataloader
 import wandb
 from libraries.algorithms import EDF, EDP
 from libraries.tasks import PollingServer
+from copy import deepcopy
 
 warnings.filterwarnings("ignore")
 
@@ -674,10 +675,12 @@ class GeneticAlgorithm(Optimizer):
 
         # create the next generation
         children = []
-        parent_list = list(itertools.permutations(parent_list, 2))
-        random.shuffle(parent_list)
+        parent_idxs = list(itertools.permutations(list(range(len(parent_list))), 2))
+        random.shuffle(parent_idxs)
+        
+        parent_list = [(deepcopy(parent_list[i]), deepcopy(parent_list[j])) for i, j in parent_idxs[: self.popSize // 2]]
 
-        for p1, p2 in parent_list[: self.popSize // 2]:
+        for p1, p2 in parent_list:
             # crossover
             c1, c2 = self.crossover(p1, p2)
             # mutation

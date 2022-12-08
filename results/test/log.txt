@@ -12,37 +12,37 @@ Parameters:
     wandblogging: False
     pop_size: 16
     num_parents: 4
-    p_cross: 0.8
-    p_mut: 0.1
+    p_cross: 0.0
+    p_mut: 1.0
     selection: tournament
     free_tasks_switches: 1
 
 -------------------------- Solution --------------------------
-PS 1: dur: 27, prd: 125, dln: 125, sep: 1
+PS 1: dur: 85, prd: 250, dln: 217, sep: 1
     tasks:	sep	pri
     tET12:	1	0
     tET3:	1	2
-    tET11:	0	2
+    tET15:	0	1
+    tET16:	0	2
     tET19:	0	2
     tET0:	0	2
     tET7:	0	2
-    tET2:	0	5
+    tET6:	0	2
     tET17:	0	5
     tET5:	0	5
-    tET18:	0	6
-PS 2: dur: 29, prd: 160, dln: 90, sep: 2
+    tET1:	0	5
+    tET9:	0	6
+PS 2: dur: 2, prd: 10, dln: 10, sep: 2
     tasks:	sep	pri
     tET4:	2	0
-    tET15:	0	1
-    tET16:	0	2
-    tET6:	0	2
+    tET11:	0	2
     tET13:	0	3
-    tET8:	0	3
-    tET1:	0	5
+    tET2:	0	5
     tET14:	0	5
     tET10:	0	6
-    tET9:	0	6
-Optimal solution cost: 0.03537, valid: True
-Average WCRT for TT+PS task: 261.69 ms (max: 581 ms)
-Average WCRT for ET task: 587.25 ms (max: 1152 ms)
+    tET18:	0	6
+    tET8:	0	3
+Optimal solution cost: 0.03464, valid: True
+Average WCRT for TT+PS task: 350.31 ms (max: 733 ms)
+Average WCRT for ET task: 481.05 ms (max: 727 ms)
 -------------------------------------------------------------
