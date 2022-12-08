@@ -11,18 +11,18 @@ test_case_path = A
 
 profiling = False
 
-algorithm = "GA"
+algorithm = "SA"
 
-show_plot = True
+show_plot = False
 
 write_log = True
 log_directory = "./results/"
-log_name = "test"
+log_name = "GA_tournament_A"
 
 SA = dict(
-    numinstances=4,
-    numworkers=4,
-    maxiter=20,
+    numinstances=1,
+    numworkers=1,
+    maxiter=10,
     toll=0.01,
     convergence=0.1,
     extra_ps=0,  # "random",
