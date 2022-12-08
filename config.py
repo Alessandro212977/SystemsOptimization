@@ -20,9 +20,9 @@ log_directory = "./results/"
 log_name = "test"
 
 SA = dict(
-    numinstances=1,
-    numworkers=1,
-    maxiter=1000,
+    numinstances=4,
+    numworkers=4,
+    maxiter=20,
     toll=0.01,
     convergence=0.1,
     extra_ps=0,  # "random",
@@ -42,8 +42,8 @@ SA = dict(
 )
 
 GA = dict(
-    numinstances=3,
-    numworkers=3,
+    numinstances=1,
+    numworkers=1,
     maxiter=10,
     toll=0.01,
     convergence=0.1,

@@ -600,6 +600,8 @@ class GeneticAlgorithm(Optimizer):
             if len(switchable_tasks) > 0:
                 # choose a destination ps (If it is a new one, make a new PS)
                 ps_to = random.randint(0, len(solution) - 1)
+                if ps_to == ps_from:
+                    continue
                 # choose a task and do the switch
                 choosed = solution[ps_from].tasks.pop(random.choice(switchable_tasks))
                 solution[ps_to].tasks.append(choosed)
@@ -609,7 +611,7 @@ class GeneticAlgorithm(Optimizer):
         # mutation operator
         if random.random() > self.pMut:
             return solution
-
+            
         new_solution = solution.copy()
         ps_idx = random.randint(0, len(solution) - 1)
         ps =  new_solution[ps_idx]
@@ -640,25 +642,28 @@ class GeneticAlgorithm(Optimizer):
 
         # switch tasks with separation 0
         new_solution = self.tasksMutation(new_solution)
-
+        
         return new_solution
 
     # random selection
-    def selection(self, pop, scores):
+    def selection(self, population, scores):
         if self.selectionMode == "rank":
             ind = np.argpartition(-np.array(scores), -self.numParents)[-self.numParents :]
-            return [pop[i] for i in ind]
+            return [population[i] for i in ind]
 
-        elif self.selectionMode == "tournament":  # how is it called?
+        elif self.selectionMode == "tournament":
             parents = []
-            for __ in range(0, self.numParents):
-                selected_parent = random.randint(0, self.popSize - 1)
-                for __ in range(0, 5):
-                    k = random.randint(0, self.popSize - 1)
+            pool = population.copy()
+            pool_score = scores.copy()
+            while len(parents) < self.numParents:
+                selected_parent = random.randint(0, len(pool) - 1)
+                for __ in range(5):
+                    k = random.randint(0, len(pool) - 1)
                     # check if better
-                    if scores[k] < scores[selected_parent]:
+                    if pool_score[k] < pool_score[selected_parent]:
                         selected_parent = k
-                parents.append(pop[selected_parent])
+                parents.append(pool.pop(selected_parent))
+                pool_score.pop(selected_parent)
             return parents
 
         else:
@@ -676,8 +681,8 @@ class GeneticAlgorithm(Optimizer):
             # crossover
             c1, c2 = self.crossover(p1, p2)
             # mutation
-            c1, c2 = self.mutation(c1), self.mutation(c2)
-
+            c1 = self.mutation(c1)
+            c2 = self.mutation(c2)
             # store for next generation
             children.append(c1)
             children.append(c2)
