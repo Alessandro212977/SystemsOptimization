@@ -1,0 +1,56 @@
+Platform: Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz, 24 cores
+
+Taskset: ./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv
+
+Algorithm: SimulatedAnnealing
+Parameters:
+    numinstances: 100
+    numworkers: 24
+    maxiter: 2000
+    toll: 0.01
+    convergence: 0.1
+    extra_ps: random
+    wandblogging: False
+    iterationPerTemp: 50
+    initialTemp: 2
+    finalTemp: 0.0001
+    tempReduction: geometric
+    alpha: 0.4
+    beta: 5
+    dur_radius: 200
+    dln_radius: 200
+    priority_prob: 0
+    free_tasks_switches: 3
+    no_upper_lim: True
+    temptune: False
+
+-------------------------- Solution --------------------------
+PS 1: dur: 3, prd: 10, dln: 4, sep: 1
+    tasks:	sep	pri
+    tET12:	1	0
+    tET3:	1	2
+    tET1:	0	5
+    tET18:	0	6
+    tET2:	0	5
+    tET7:	0	2
+    tET5:	0	5
+    tET9:	0	6
+    tET16:	0	2
+    tET6:	0	2
+    tET14:	0	5
+    tET8:	0	3
+PS 2: dur: 6, prd: 25, dln: 16, sep: 2
+    tasks:	sep	pri
+    tET4:	2	0
+    tET17:	0	5
+    tET11:	0	2
+    tET13:	0	3
+    tET19:	0	2
+    tET15:	0	1
+    tET10:	0	6
+    tET0:	0	2
+Optimal solution cost: 0.02456, valid: True
+Average WCRT for TT+PS task: 295.59 ms (max: 720 ms)
+Average WCRT for ET task: 293.80 ms (max: 542 ms)
+Stats of 100 runs: mean converged (cost<0.1) at iter: 1325
+-------------------------------------------------------------

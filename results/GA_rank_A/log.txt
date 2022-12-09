@@ -1,0 +1,49 @@
+Platform: Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz, 24 cores
+
+Taskset: ./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv
+
+Algorithm: GeneticAlgorithm
+Parameters:
+    numinstances: 100
+    numworkers: 24
+    maxiter: 100
+    toll: 0.01
+    convergence: 0.1
+    wandblogging: False
+    pop_size: 16
+    num_parents: 4
+    p_cross: 0.8
+    p_mut: 0.1
+    selection: rank
+    free_tasks_switches: 1
+
+-------------------------- Solution --------------------------
+PS 1: dur: 1, prd: 5, dln: 1, sep: 1
+    tasks:	sep	pri
+    tET12:	1	0
+    tET3:	1	2
+    tET16:	0	2
+    tET13:	0	3
+    tET10:	0	6
+    tET18:	0	6
+    tET1:	0	5
+PS 2: dur: 3, prd: 10, dln: 6, sep: 2
+    tasks:	sep	pri
+    tET4:	2	0
+    tET15:	0	1
+    tET11:	0	2
+    tET19:	0	2
+    tET6:	0	2
+    tET8:	0	3
+    tET2:	0	5
+    tET17:	0	5
+    tET5:	0	5
+    tET9:	0	6
+    tET7:	0	2
+    tET0:	0	2
+    tET14:	0	5
+Optimal solution cost: 0.02361, valid: True
+Average WCRT for TT+PS task: 268.88 ms (max: 660 ms)
+Average WCRT for ET task: 297.80 ms (max: 689 ms)
+Stats of 100 runs: mean converged (cost<0.1) at iter: 1
+-------------------------------------------------------------

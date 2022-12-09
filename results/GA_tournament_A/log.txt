@@ -1,48 +1,49 @@
-Platform: Intel(R) Core(TM) i7-4770K CPU @ 3.50GHz, 8 cores
+Platform: Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz, 24 cores
 
 Taskset: ./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv
 
 Algorithm: GeneticAlgorithm
 Parameters:
-    numinstances: 1
-    numworkers: 1
-    maxiter: 10
+    numinstances: 100
+    numworkers: 24
+    maxiter: 100
     toll: 0.01
     convergence: 0.1
     wandblogging: False
     pop_size: 16
     num_parents: 4
-    p_cross: 0.0
-    p_mut: 1.0
+    p_cross: 0.8
+    p_mut: 0.1
     selection: tournament
     free_tasks_switches: 1
 
 -------------------------- Solution --------------------------
-PS 1: dur: 85, prd: 250, dln: 217, sep: 1
+PS 1: dur: 1, prd: 4, dln: 4, sep: 1
     tasks:	sep	pri
     tET12:	1	0
     tET3:	1	2
-    tET15:	0	1
-    tET16:	0	2
-    tET19:	0	2
     tET0:	0	2
     tET7:	0	2
-    tET6:	0	2
+    tET8:	0	3
+    tET2:	0	5
     tET17:	0	5
-    tET5:	0	5
-    tET1:	0	5
-    tET9:	0	6
-PS 2: dur: 2, prd: 10, dln: 10, sep: 2
+    tET18:	0	6
+    tET10:	0	6
+PS 2: dur: 2, prd: 8, dln: 5, sep: 2
     tasks:	sep	pri
     tET4:	2	0
+    tET15:	0	1
+    tET16:	0	2
     tET11:	0	2
+    tET19:	0	2
+    tET6:	0	2
     tET13:	0	3
-    tET2:	0	5
+    tET5:	0	5
+    tET1:	0	5
     tET14:	0	5
-    tET10:	0	6
-    tET18:	0	6
-    tET8:	0	3
-Optimal solution cost: 0.03464, valid: True
-Average WCRT for TT+PS task: 350.31 ms (max: 733 ms)
-Average WCRT for ET task: 481.05 ms (max: 727 ms)
+    tET9:	0	6
+Optimal solution cost: 0.02396, valid: True
+Average WCRT for TT+PS task: 268.34 ms (max: 662 ms)
+Average WCRT for ET task: 306.65 ms (max: 601 ms)
+Stats of 100 runs: mean converged (cost<0.1) at iter: 1
 -------------------------------------------------------------

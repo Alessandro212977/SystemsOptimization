@@ -1,8 +1,10 @@
-from libraries.dataloader import DataLoader
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
-from collections import defaultdict
+
 from libraries.algorithms import *
+from libraries.dataloader import DataLoader
 
 
 def getTimetablePlot(TT, sigma, xmax=None, group_tt=False):

@@ -1,14 +1,11 @@
-from tqdm import tqdm
 import cpuinfo
+from tqdm import tqdm
 
+import config
 import libraries.dataloader as dataloader
-from libraries.optimizers import (
-    SimulatedAnnealing,
-    GeneticAlgorithm,
-)
 from libraries.algorithms import EDF
 from libraries.graphplot import getTimetablePlot
-import config
+from libraries.optimizers import GeneticAlgorithm, SimulatedAnnealing
 
 
 def experiment(data_path, profiling=False):
@@ -27,6 +24,7 @@ def experiment(data_path, profiling=False):
             numworkers=config.SA["numworkers"],
             maxiter=config.SA["maxiter"],
             toll=config.SA["toll"],
+            convergence=config.SA["convergence"],
             extra_ps=config.SA["extra_ps"],
             wandblogging=config.SA["wandblogging"],
             iterationPerTemp=config.SA["iterationPerTemp"],
@@ -35,11 +33,11 @@ def experiment(data_path, profiling=False):
             tempReduction=config.SA["tempReduction"],
             alpha=config.SA["alpha"],
             beta=config.SA["beta"],
-            dur_radius=config.SA["dur_radius"], 
-            dln_radius=config.SA["dln_radius"], 
+            dur_radius=config.SA["dur_radius"],
+            dln_radius=config.SA["dln_radius"],
             priority_prob=config.SA["priority_prob"],
             free_tasks_switches=config.SA["free_tasks_switches"],
-            no_upper_lim=config.SA["no_upper_lim"]
+            no_upper_lim=config.SA["no_upper_lim"],
         )
 
     elif config.algorithm == "GA":
@@ -50,11 +48,14 @@ def experiment(data_path, profiling=False):
             numworkers=config.GA["numworkers"],
             maxiter=config.GA["maxiter"],
             toll=config.GA["toll"],
+            convergence=config.SA["convergence"],
             wandblogging=config.GA["wandblogging"],
             pop_size=config.GA["pop_size"],
             num_parents=config.GA["num_parents"],
             p_cross=config.GA["p_cross"],
             p_mut=config.GA["p_mut"],
+            selection=config.GA["selection"],
+            free_tasks_switches=config.GA["free_tasks_switches"]
         )
     else:
         print(f"{config.algorithm} not recognized")
@@ -67,23 +68,29 @@ def experiment(data_path, profiling=False):
     bar_iter = optim.maxIter * optim.numInstances if optim.numWorkers == 1 else optim.numInstances
 
     if profiling:
-        import cProfile, pstats
+        import cProfile
+        import pstats
 
         with cProfile.Profile() as pr:
             with tqdm(
-                total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}"
+                total=bar_iter,
+                desc="Progress",
+                bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}",
             ) as bar:  # progress bar
                 optim.run(bar.update)
         pr = pstats.Stats(pr)
         pr.sort_stats("cumulative").print_stats(10)
     else:
-        with tqdm(total=bar_iter, desc="Progress", bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}") as bar:
+        with tqdm(
+            total=bar_iter,
+            desc="Progress",
+            bar_format="{desc}{percentage:3.0f}%|{bar:10}{r_bar}",
+        ) as bar:
             optim.run(bar.update)
 
     optim.printSolution()
 
     if config.show_plot:
-        optim.plotBars().show()
         optim.plotCost(instance_idx="all").show()
 
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
@@ -97,16 +104,13 @@ def experiment(data_path, profiling=False):
         except FileExistsError:
             print(f"Overwriting {config.log_name} folder")
 
-        bar_plt = optim.plotBars()
-        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.png")
-        bar_plt.savefig(config.log_directory + config.log_name + "/bar_plot.eps")
         cost_plt = optim.plotCost(instance_idx="all")
         cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.png")
-        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.eps")
+        cost_plt.savefig(config.log_directory + config.log_name + "/cost_plot.pdf")
         __, timetable, __, __ = EDF(TT + optim.bestSolution)
         timetable_plot = getTimetablePlot(TT + optim.bestSolution, timetable, group_tt=True)
         timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.png")
-        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.eps")
+        timetable_plot.savefig(config.log_directory + config.log_name + "/timetable_plot.pdf")
 
         with open(config.log_directory + config.log_name + "/log.txt", "w") as logfile:
             logfile.write("Platform: {}, {} cores\n\n".format(cpu["brand_raw"], cpu["count"]))
@@ -114,9 +118,10 @@ def experiment(data_path, profiling=False):
             logfile.write(f"Algorithm: {optim.__class__.__name__}\n")
             logfile.write("Parameters:\n")
 
-            for key, val in {"SimulatedAnnealing": config.SA, "GeneticAlgorithm": config.GA}[
-                optim.__class__.__name__
-            ].items():
+            for key, val in {
+                "SimulatedAnnealing": config.SA,
+                "GeneticAlgorithm": config.GA,
+            }[optim.__class__.__name__].items():
                 logfile.write(f"    {key}: {val}\n")
             logfile.write("\n" + optim.printSolution(get=True))
 
