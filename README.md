@@ -1,7 +1,6 @@
 # Systems Optimization course
 ## Configuring ADAS Applications with Time-Triggered and Event-Triggered Tasks
-Keywords and phrases time-triggered, event-triggered, scheduling, real-time, combinatorial opti-
-mization
+Keywords and phrases time-triggered, event-triggered, scheduling, real-time, combinatorial optimization
 
 # Goal
 As an input you are given: 
@@ -19,8 +18,7 @@ The solution should be optimized such that:
  - (2) The ET task separation constraints are satisfied.
  - (3) The average worst-case response times (WCRT) of all tasks (TT and ET) is minimized.
  
- # Solution
- TODO
- 
  # How to...
- TODO
+ - Set the parameters in the config.py file
+ - Execute the optimization by running main.py
+ 
