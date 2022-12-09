@@ -1,48 +1,41 @@
 Platform: Intel(R) Core(TM) i7-4770K CPU @ 3.50GHz, 8 cores
 
-Taskset: ./test_cases/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv
+Taskset: ./test_cases/taskset_small.csv
 
-Algorithm: GeneticAlgorithm
+Algorithm: SimulatedAnnealing
 Parameters:
     numinstances: 1
     numworkers: 1
-    maxiter: 10
+    maxiter: 1000
     toll: 0.01
     convergence: 0.1
+    extra_ps: 0
     wandblogging: False
-    pop_size: 16
-    num_parents: 4
-    p_cross: 0.0
-    p_mut: 1.0
-    selection: tournament
-    free_tasks_switches: 1
+    iterationPerTemp: 50
+    initialTemp: 2
+    finalTemp: 0.0001
+    tempReduction: geometric
+    alpha: 0.4
+    beta: 5
+    dur_radius: 200
+    dln_radius: 200
+    priority_prob: 0
+    free_tasks_switches: 3
+    no_upper_lim: False
+    temptune: False
 
 -------------------------- Solution --------------------------
-PS 1: dur: 85, prd: 250, dln: 217, sep: 1
+PS 1: dur: 9, prd: 25, dln: 23, sep: 1
     tasks:	sep	pri
-    tET12:	1	0
-    tET3:	1	2
-    tET15:	0	1
-    tET16:	0	2
-    tET19:	0	2
-    tET0:	0	2
-    tET7:	0	2
-    tET6:	0	2
-    tET17:	0	5
-    tET5:	0	5
-    tET1:	0	5
-    tET9:	0	6
-PS 2: dur: 2, prd: 10, dln: 10, sep: 2
+    tET0:	1	1
+    tET1:	1	2
+PS 2: dur: 1, prd: 8, dln: 1, sep: 2
     tasks:	sep	pri
-    tET4:	2	0
-    tET11:	0	2
-    tET13:	0	3
-    tET2:	0	5
-    tET14:	0	5
-    tET10:	0	6
-    tET18:	0	6
-    tET8:	0	3
-Optimal solution cost: 0.03464, valid: True
-Average WCRT for TT+PS task: 350.31 ms (max: 733 ms)
-Average WCRT for ET task: 481.05 ms (max: 727 ms)
+    tET2:	2	4
+PS 3: dur: 53, prd: 400, dln: 131, sep: 3
+    tasks:	sep	pri
+    tET3:	3	6
+Optimal solution cost: 0.19809, valid: True
+Average WCRT for TT+PS task: 1656.57 ms (max: 4647 ms)
+Average WCRT for ET task: 2305.25 ms (max: 4525 ms)
 -------------------------------------------------------------

@@ -582,7 +582,7 @@ class GeneticAlgorithm(Optimizer):
         pt = random.randint(1, len(p1) - 1)
         c1, c2 = p1.copy(), p2.copy()
         for i, (ps1, ps2) in enumerate(zip(p1, p2)):
-            if i<pt:
+            if i < pt:
                 c1[i].duration = ps2.duration
                 c1[i].period = ps2.period
                 c1[i].deadline = ps2.deadline
@@ -612,10 +612,10 @@ class GeneticAlgorithm(Optimizer):
         # mutation operator
         if random.random() > self.pMut:
             return solution
-            
+
         new_solution = solution.copy()
         ps_idx = random.randint(0, len(solution) - 1)
-        ps =  new_solution[ps_idx]
+        ps = new_solution[ps_idx]
         new_period = self.period_divisors[
             self.clamp(
                 self.period_divisors.index(ps.period) + random.choice([-1, 0, 1]),
@@ -633,17 +633,17 @@ class GeneticAlgorithm(Optimizer):
         new_deadline = random.randint(dln_low, dln_up)
 
         new_solution[ps_idx] = PollingServer(
-                ps.name,
-                new_duration,
-                new_period,
-                new_deadline,
-                ps.tasks.copy(),
-                ps.separation,
-            )
+            ps.name,
+            new_duration,
+            new_period,
+            new_deadline,
+            ps.tasks.copy(),
+            ps.separation,
+        )
 
         # switch tasks with separation 0
         new_solution = self.tasksMutation(new_solution)
-        
+
         return new_solution
 
     # random selection
@@ -677,8 +677,10 @@ class GeneticAlgorithm(Optimizer):
         children = []
         parent_idxs = list(itertools.permutations(list(range(len(parent_list))), 2))
         random.shuffle(parent_idxs)
-        
-        parent_list = [(deepcopy(parent_list[i]), deepcopy(parent_list[j])) for i, j in parent_idxs[: self.popSize // 2]]
+
+        parent_list = [
+            (deepcopy(parent_list[i]), deepcopy(parent_list[j])) for i, j in parent_idxs[: self.popSize // 2]
+        ]
 
         for p1, p2 in parent_list:
             # crossover
