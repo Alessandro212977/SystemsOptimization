@@ -25,31 +25,31 @@ Parameters:
     temptune: False
 
 -------------------------- Solution --------------------------
-PS 1: dur: 4, prd: 20, dln: 17, sep: 1
+PS 1: dur: 413, prd: 1200, dln: 1070, sep: 1
     tasks:	sep	pri
     tET12:	1	0
     tET3:	1	2
-    tET5:	0	5
-    tET13:	0	3
-    tET7:	0	2
+    tET11:	0	2
+    tET2:	0	5
     tET18:	0	6
-    tET8:	0	3
     tET17:	0	5
-    tET9:	0	6
     tET16:	0	2
-PS 2: dur: 533, prd: 1000, dln: 705, sep: 2
+    tET0:	0	2
+    tET9:	0	6
+    tET7:	0	2
+    tET14:	0	5
+    tET13:	0	3
+    tET15:	0	1
+PS 2: dur: 22, prd: 150, dln: 46, sep: 2
     tasks:	sep	pri
     tET4:	2	0
-    tET11:	0	2
     tET6:	0	2
-    tET15:	0	1
     tET10:	0	6
-    tET19:	0	2
-    tET14:	0	5
-    tET2:	0	5
     tET1:	0	5
-    tET0:	0	2
-Optimal solution cost: 0.06425, valid: True
-Average WCRT for TT+PS task: 938.81 ms (max: 1748 ms)
-Average WCRT for ET task: 603.30 ms (max: 867 ms)
+    tET19:	0	2
+    tET8:	0	3
+    tET5:	0	5
+Optimal solution cost: 0.08234, valid: False
+Average WCRT for TT+PS task: 636.62 ms (max: 875 ms)
+Average WCRT for ET task: 1309.75 ms (max: 1956 ms)
 -------------------------------------------------------------
